@@ -150,12 +150,12 @@ for epoch in xrange(n_epoch):
 
         i += 1
 
-        print 'epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \
+        print('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \
               % (epoch, i, len_dataloader, err_s_label.cpu().data.numpy(),
-                 err_s_domain.cpu().data.numpy(), err_t_domain.cpu().data.numpy())
+                 err_s_domain.cpu().data.numpy(), err_t_domain.cpu().data.numpy()))
 
     torch.save(my_net, '{0}/mnist_mnistm_model_epoch_{1}.pth'.format(model_root, epoch))
     test(source_dataset_name, epoch)
     test(target_dataset_name, epoch)
 
-print 'done'
+print('done')
