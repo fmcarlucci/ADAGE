@@ -7,7 +7,7 @@ from torch.autograd import Variable
 from dataset.data_loader import GetLoader
 from torchvision import datasets
 from torchvision import transforms
-from models.model import CNNModel
+from models.model import CNNModel, Combo
 import numpy as np
 from test import test
 
@@ -64,7 +64,7 @@ dataloader_target = torch.utils.data.DataLoader(
 
 # load model
 
-my_net = CNNModel()
+my_net = Combo()  # CNNModel()
 
 # setup optimizer
 
