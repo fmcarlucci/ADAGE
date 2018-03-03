@@ -27,6 +27,7 @@ class ReverseLayerF(Function):
 
 class Combo(nn.Module):
     def __init__(self, deco_weight=0.001):
+        super(Combo, self).__init__()
         self.deco = Deco(Bottleneck, [8], deco_weight)
         self.net = CNNModel()
 
