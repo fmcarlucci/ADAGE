@@ -13,8 +13,8 @@ from test import test
 
 source_dataset_name = 'mnist'
 target_dataset_name = 'mnist_m'
-source_image_root = os.path.join('..', 'dataset', source_dataset_name)
-target_image_root = os.path.join('..', 'dataset', target_dataset_name)
+source_image_root = os.path.join('dataset', source_dataset_name)
+target_image_root = os.path.join('dataset', target_dataset_name)
 model_root = os.path.join('..', 'models')
 cuda = True
 cudnn.benchmark = True
