@@ -38,7 +38,7 @@ img_transform = transforms.Compose([
 dataset_source = datasets.MNIST(
     root=source_image_root,
     train=True,
-    transform=img_transform,
+    transform=img_transform, download=True
 )
 
 dataloader_source = torch.utils.data.DataLoader(
