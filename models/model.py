@@ -47,7 +47,7 @@ class Deco(nn.Module):
         # self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, layers[0])
         #        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
-        self.conv3D = nn.Conv2d(256, 3, 1)
+        self.conv3D = nn.Conv2d(256, 1, 1)
         # self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         # self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
 
