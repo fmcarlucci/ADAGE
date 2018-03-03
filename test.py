@@ -97,4 +97,4 @@ def test(dataset_name, epoch):
 
         accu = n_correct * 1.0 / n_total
 
-    print 'epoch: %d, accuracy of the %s dataset: %f' % (epoch, dataset_name, accu)
+    print('epoch: %d, accuracy of the %s dataset: %f' % (epoch, dataset_name, accu))
