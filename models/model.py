@@ -1,7 +1,14 @@
 import torch.nn as nn
 from torch.autograd import Function
 from torchvision.models.resnet import Bottleneck
+import math
+from itertools import chain
 
+import torch
+import torch.nn as nn
+import torch.utils.model_zoo as model_zoo
+from torch.autograd import Variable
+from torchvision.models.resnet import Bottleneck
 
 class ReverseLayerF(Function):
 
@@ -36,7 +43,7 @@ class Deco(nn.Module):
                                bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        # self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, layers[0])
         #        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.conv3D = nn.Conv2d(256, 3, 1)
@@ -78,7 +85,7 @@ class Deco(nn.Module):
         x = self.layer1(x)
         x = self.conv3D(x)
         #        x = self.layer2(x)
-        x = self.deco_weight * nn.functional.upsample(x, scale_factor=4, mode='bilinear')
+        x = self.deco_weight * nn.functional.upsample(x, scale_factor=2, mode='bilinear')
         return original + x, x.norm() / original.shape[0]
 
 
