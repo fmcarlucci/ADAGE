@@ -82,7 +82,7 @@ for p in my_net.parameters():
 
 # training
 
-for epoch in xrange(n_epoch):
+for epoch in range(n_epoch):
 
     len_dataloader = min(len(dataloader_source), len(dataloader_target))
     data_source_iter = iter(dataloader_source)
