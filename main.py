@@ -16,6 +16,7 @@ target_dataset_name = 'mnist_m'
 source_image_root = os.path.join('dataset', source_dataset_name)
 target_image_root = os.path.join('dataset', target_dataset_name)
 model_root = 'models'
+
 cuda = True
 cudnn.benchmark = True
 lr = 1e-3

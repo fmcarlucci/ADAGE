@@ -10,8 +10,8 @@ from torchvision import datasets
 def test(dataset_name, epoch):
     assert dataset_name in ['mnist', 'mnist_m']
 
-    model_root = os.path.join('..', 'models')
-    image_root = os.path.join('..', 'dataset', dataset_name)
+    model_root = 'models'
+    image_root = os.path.join('dataset', dataset_name)
 
     cuda = True
     cudnn.benchmark = True
