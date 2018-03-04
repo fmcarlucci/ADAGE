@@ -35,7 +35,7 @@ def get_name(args):
 
 
 def to_np(x):
-    return x.data.cpu().numpy()
+    return x.cpu().numpy()
 
 
 args = get_args()
