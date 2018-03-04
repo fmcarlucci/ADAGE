@@ -186,7 +186,7 @@ for epoch in range(n_epoch):
 
         if i is 0 and args.use_deco:
             logger.image_summary("images/source", to_np(my_net.deco(Variable(s_img[:10]))), i + epoch * len_dataloader)
-            logger.image_summary("images/target", to_np(my_net.deco(Variable(t_img[:10])), i + epoch * len_dataloader)
+            logger.image_summary("images/target", to_np(my_net.deco(Variable(t_img[:10]))), i + epoch * len_dataloader)
 
         i += 1
 
