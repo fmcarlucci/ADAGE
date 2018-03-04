@@ -34,6 +34,10 @@ def get_name(args):
     return name + "_%d" % (time.time() % 100)
 
 
+def to_np(x):
+    return x.data.cpu().numpy()
+
+
 args = get_args()
 run_name = get_name(args)
 logger = Logger("logs/" + run_name)
@@ -180,9 +184,13 @@ for epoch in range(n_epoch):
         err.backward()
         optimizer.step()
 
+        if i is 0 and args.use_deco:
+            logger.image_summary("images/source", to_np(my_net.deco(s_img[:10])), i + epoch * len_dataloader)
+            logger.image_summary("images/target", to_np(my_net.deco(t_img[:10])), i + epoch * len_dataloader)
+
         i += 1
 
-        if (i % 50) == 0:
+        if (i % 100) == 0:
             logger.scalar_summary("loss/source", err_s_label, i + epoch*len_dataloader)
             logger.scalar_summary("loss/domain_s", err_s_domain, i + epoch*len_dataloader)
             logger.scalar_summary("loss/domain_t", err_t_domain, i + epoch*len_dataloader)
