@@ -38,6 +38,10 @@ def to_np(x):
     return x.data.cpu().numpy()
 
 
+def to_grid(x):
+    return to_np(x).swapaxes(0, 1).reshape(3, 28 * 3, 28 * 3).swapaxes(1, 2).T.shape
+
+
 args = get_args()
 run_name = get_name(args)
 logger = Logger("logs/" + run_name)
@@ -185,15 +189,15 @@ for epoch in range(n_epoch):
         optimizer.step()
 
         if i is 0 and args.use_deco:
-            logger.image_summary("images/source", to_np(my_net.deco(Variable(s_img[:10]))), i + epoch * len_dataloader)
-            logger.image_summary("images/target", to_np(my_net.deco(Variable(t_img[:10]))), i + epoch * len_dataloader)
+            logger.image_summary("images/source", to_grid(my_net.deco(Variable(s_img[:9]))), i + epoch * len_dataloader)
+            logger.image_summary("images/target", to_grid(my_net.deco(Variable(t_img[:9]))), i + epoch * len_dataloader)
 
         i += 1
 
         if (i % 100) == 0:
-            logger.scalar_summary("loss/source", err_s_label, i + epoch*len_dataloader)
-            logger.scalar_summary("loss/domain_s", err_s_domain, i + epoch*len_dataloader)
-            logger.scalar_summary("loss/domain_t", err_t_domain, i + epoch*len_dataloader)
+            logger.scalar_summary("loss/source", err_s_label, i + epoch * len_dataloader)
+            logger.scalar_summary("loss/domain_s", err_s_domain, i + epoch * len_dataloader)
+            logger.scalar_summary("loss/domain_t", err_t_domain, i + epoch * len_dataloader)
             print('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \
                   % (epoch, i, len_dataloader, err_s_label.cpu().data.numpy(),
                      err_s_domain.cpu().data.numpy(), err_t_domain.cpu().data.numpy()))
