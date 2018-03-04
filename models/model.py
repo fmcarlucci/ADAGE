@@ -77,10 +77,9 @@ class Deco(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, original):
-        if original.shape[1] == 1:
-            original = original.expand([-1, 3, -1, -1])
-        x = self.conv1(original)
+    def forward(self, input_data):
+        input_data = input_data.expand(input_data.data.shape[0], 3, 28, 28)
+        x = self.conv1(input_data)
         x = self.bn1(x)
         x = self.relu(x)
         # x = self.maxpool(x)
@@ -90,7 +89,7 @@ class Deco(nn.Module):
         #        x = self.layer2(x)
         # x = nn.functional.upsample(x, scale_factor=2, mode='bilinear')
         x = self.deco_weight * x
-        return original + x, x.norm() / original.shape[0]
+        return input_data + x, x.norm() / input_data.shape[0]
 
 
 class CNNModel(nn.Module):
