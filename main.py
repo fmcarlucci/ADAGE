@@ -1,3 +1,4 @@
+import argparse
 import random
 import os
 import torch.backends.cudnn as cudnn
@@ -7,9 +8,35 @@ from torch.autograd import Variable
 from dataset.data_loader import GetLoader
 from torchvision import datasets
 from torchvision import transforms
+
+from logger import Logger
 from models.model import CNNModel, Combo
 import numpy as np
 from test import test
+import time
+
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--image_size', type=int, default=28)
+    parser.add_argument('--batch_size', default=128, type=int)
+    parser.add_argument('--epochs', default=100, type=int)
+    parser.add_argument('--DANN_weight', default=1.0, type=float)
+    parser.add_argument('--use_deco', action="store_true", help="If true use deco architecture")
+    return parser.parse_args()
+
+
+def get_name(args):
+    name = "lr:%g_batchSize:%d_epochs:%d_DannWeight:%g" % (args.lr, args.batch_size, args.epochs, args.DANN_weight)
+    if args.use_deco:
+        name += "_deco"
+    return name + "_%d" % (time.time() % 100)
+
+
+args = get_args()
+run_name = get_name(args)
+logger = Logger("logs/" + run_name)
 
 source_dataset_name = 'mnist'
 target_dataset_name = 'mnist_m'
@@ -19,10 +46,11 @@ model_root = 'models'
 
 cuda = True
 cudnn.benchmark = True
-lr = 1e-3
-batch_size = 128
-image_size = 28
-n_epoch = 100
+lr = args.lr
+batch_size = args.batch_size
+image_size = args.image_size
+n_epoch = args.epochs
+dann_weight = args.DANN_weight
 
 manual_seed = random.randint(1, 10000)
 random.seed(manual_seed)
@@ -64,7 +92,10 @@ dataloader_target = torch.utils.data.DataLoader(
 
 # load model
 
-my_net = CNNModel()  # Combo()  # CNNModel()
+if args.use_deco:
+    my_net = Combo()
+else:
+    my_net = CNNModel()
 
 # setup optimizer
 
@@ -145,19 +176,24 @@ for epoch in range(n_epoch):
 
         _, domain_output = my_net(input_data=inputv_img, alpha=alpha)
         err_t_domain = loss_domain(domain_output, domainv_label)
-        err = err_t_domain + err_s_domain + err_s_label
+        err = dann_weight * err_t_domain + dann_weight * err_s_domain + err_s_label
         err.backward()
         optimizer.step()
 
         i += 1
 
-        if (i % 10) == 0:
+        if (i % 50) == 0:
+            logger.scalar_summary("loss/source", err_s_label, i + epoch*len_dataloader)
+            logger.scalar_summary("loss/domain_s", err_s_domain, i + epoch*len_dataloader)
+            logger.scalar_summary("loss/domain_t", err_t_domain, i + epoch*len_dataloader)
             print('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \
                   % (epoch, i, len_dataloader, err_s_label.cpu().data.numpy(),
                      err_s_domain.cpu().data.numpy(), err_t_domain.cpu().data.numpy()))
 
     torch.save(my_net, '{0}/mnist_mnistm_model_epoch_{1}.pth'.format(model_root, epoch))
-    test(source_dataset_name, epoch)
-    test(target_dataset_name, epoch)
+    s_acc = test(source_dataset_name, epoch)
+    t_acc = test(target_dataset_name, epoch)
+    logger.scalar_summary("acc/source", s_acc, i + epoch * len_dataloader)
+    logger.scalar_summary("acc/target", t_acc, i + epoch * len_dataloader)
 
 print('done')
