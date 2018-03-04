@@ -22,7 +22,7 @@ cudnn.benchmark = True
 lr = 1e-3
 batch_size = 128
 image_size = 28
-n_epoch = 10 # 100
+n_epoch = 100
 
 manual_seed = random.randint(1, 10000)
 random.seed(manual_seed)
@@ -46,7 +46,7 @@ dataloader_source = torch.utils.data.DataLoader(
     dataset=dataset_source,
     batch_size=batch_size,
     shuffle=True,
-    num_workers=8)
+    num_workers=4)
 
 train_list = os.path.join(target_image_root, 'mnist_m_train_labels.txt')
 
@@ -60,11 +60,11 @@ dataloader_target = torch.utils.data.DataLoader(
     dataset=dataset_target,
     batch_size=batch_size,
     shuffle=True,
-    num_workers=8)
+    num_workers=4)
 
 # load model
 
-my_net = Combo()  # CNNModel()
+my_net = CNNModel()  # Combo()  # CNNModel()
 
 # setup optimizer
 
@@ -151,7 +151,7 @@ for epoch in range(n_epoch):
 
         i += 1
 
-        if (i % 5) == 0:
+        if (i % 10) == 0:
             print('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \
                   % (epoch, i, len_dataloader, err_s_label.cpu().data.numpy(),
                      err_s_domain.cpu().data.numpy(), err_t_domain.cpu().data.numpy()))

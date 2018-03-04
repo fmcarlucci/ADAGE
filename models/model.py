@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 from torch.autograd import Variable
-from torchvision.models.resnet import Bottleneck
+from torchvision.models.resnet import BasicBlock, Bottleneck
 
 class ReverseLayerF(Function):
 
@@ -26,9 +26,9 @@ class ReverseLayerF(Function):
 
 
 class Combo(nn.Module):
-    def __init__(self, deco_weight=0.001):
+    def __init__(self, deco_weight=0.001, n_deco=4, deco_block=BasicBlock):
         super(Combo, self).__init__()
-        self.deco = Deco(Bottleneck, [8], deco_weight)
+        self.deco = Deco(deco_block, [n_deco], deco_weight)
         self.net = CNNModel()
 
     def forward(self, input_data, alpha):
