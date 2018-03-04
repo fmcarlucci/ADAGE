@@ -39,7 +39,9 @@ def to_np(x):
 
 
 def to_grid(x):
-    return to_np(x).swapaxes(0, 1).reshape(3, 28 * 3, 28 * 3).swapaxes(1, 2).T
+    y = to_np(x).swapaxes(0, 1).reshape(3, 1, 28 * 3, 28 * 3).swapaxes(0, 1)
+    print(y.shape)
+    return y
 
 
 args = get_args()
@@ -188,7 +190,7 @@ for epoch in range(n_epoch):
         err.backward()
         optimizer.step()
 
-        if i is 0 and args.use_deco:
+        if (i is 0) and args.use_deco:
             logger.image_summary("images/source", to_grid(my_net.deco(Variable(s_img[:9]))), i + epoch * len_dataloader)
             logger.image_summary("images/target", to_grid(my_net.deco(Variable(t_img[:9]))), i + epoch * len_dataloader)
 
