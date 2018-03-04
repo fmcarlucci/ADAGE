@@ -89,7 +89,7 @@ class Deco(nn.Module):
         #        x = self.layer2(x)
         # x = nn.functional.upsample(x, scale_factor=2, mode='bilinear')
         x = self.deco_weight * x
-        return input_data + x, x.norm() / input_data.shape[0]
+        return input_data + x #, x.norm() / input_data.shape[0]
 
 
 class CNNModel(nn.Module):
