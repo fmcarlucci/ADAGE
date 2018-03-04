@@ -39,7 +39,7 @@ def to_np(x):
 
 
 def to_grid(x):
-    return to_np(x).swapaxes(0, 1).reshape(3, 28 * 3, 28 * 3).swapaxes(1, 2).T.shape
+    return to_np(x).swapaxes(0, 1).reshape(3, 28 * 3, 28 * 3).swapaxes(1, 2).T
 
 
 args = get_args()
