@@ -40,7 +40,7 @@ class Deco(nn.Module):
     def __init__(self, block, layers, deco_weight):
         self.inplanes = 64
         super(Deco, self).__init__()
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=5, stride=1, padding=2,
                                bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
@@ -78,6 +78,8 @@ class Deco(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, original):
+        if original.shape[1] == 1:
+            original = original.expand([-1, 3, -1, -1])
         x = self.conv1(original)
         x = self.bn1(x)
         x = self.relu(x)
@@ -86,7 +88,8 @@ class Deco(nn.Module):
         x = self.layer1(x)
         x = self.conv3D(x)
         #        x = self.layer2(x)
-        x = self.deco_weight * nn.functional.upsample(x, scale_factor=2, mode='bilinear')
+        # x = nn.functional.upsample(x, scale_factor=2, mode='bilinear')
+        x = self.deco_weight * x
         return original + x, x.norm() / original.shape[0]
 
 
