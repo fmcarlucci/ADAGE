@@ -200,10 +200,9 @@ for epoch in range(n_epoch):
 
         i += 1
 
-        if (i % 100) == 0:
+        if (i % 300) == 0:
             logger.scalar_summary("loss/source", err_s_label, i + epoch * len_dataloader)
-            logger.scalar_summary("loss/domain_s", err_s_domain, i + epoch * len_dataloader)
-            logger.scalar_summary("loss/domain_t", err_t_domain, i + epoch * len_dataloader)
+            logger.scalar_summary("loss/domain", (err_s_domain + err_t_domain) / 2, i + epoch * len_dataloader)
             print('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \
                   % (epoch, i, len_dataloader, err_s_label.cpu().data.numpy(),
                      err_s_domain.cpu().data.numpy(), err_t_domain.cpu().data.numpy()))
