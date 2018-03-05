@@ -24,6 +24,7 @@ def get_args():
     parser.add_argument('--epochs', default=100, type=int)
     parser.add_argument('--DANN_weight', default=1.0, type=float)
     parser.add_argument('--use_deco', action="store_true", help="If true use deco architecture")
+    parser.add_argument('--suffix', help="Will be added to end of name")
     return parser.parse_args()
 
 
@@ -31,7 +32,7 @@ def get_name(args):
     name = "lr:%g_batchSize:%d_epochs:%d_DannWeight:%g" % (args.lr, args.batch_size, args.epochs, args.DANN_weight)
     if args.use_deco:
         name += "_deco"
-    return name + "_%d" % (time.time() % 100)
+    return name + args.suffix + "_%d" % (time.time() % 100)
 
 
 def to_np(x):
