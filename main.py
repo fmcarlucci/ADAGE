@@ -70,7 +70,7 @@ torch.manual_seed(manual_seed)
 # load data
 
 img_transform = transforms.Compose([
-    # transforms.RandomResizedCrop(image_size),
+    transforms.RandomResizedCrop(image_size, scale=(0.3, 1.0)),
     transforms.RandomCrop(image_size),
     transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0),
     transforms.ToTensor(),
