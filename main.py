@@ -31,8 +31,8 @@ def get_args():
 
 
 def get_name(args):
-    name = "%lr:%g_batchSize:%d_epochs:%d_DannWeight:%g_imageSize:%d" % (args.lr, args.batch_size, args.epochs,
-                                                                         args.DANN_weight, args.image_size)
+    name = "lr:%g_batchSize:%d_epochs:%d_DannWeight:%g_imageSize:%d" % (args.lr, args.batch_size, args.epochs,
+                                                                        args.DANN_weight, args.image_size)
     if args.use_deco:
         name += "_deco"
     return name + args.suffix + "_%d" % (time.time() % 100)
@@ -51,7 +51,7 @@ def to_grid(x):
 
 args = get_args()
 run_name = get_name(args)
-logger = Logger("logs/{}_{}/{}".format(args.source,args.target,run_name))
+logger = Logger("logs/{}_{}/{}".format(args.source, args.target, run_name))
 
 model_root = 'models'
 
