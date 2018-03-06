@@ -38,7 +38,6 @@ def get_dataset(name, image_size, mode="train"):
     elif name == svhn:
         dataset = datasets.SVHN(
             root=os.path.join('dataset', 'svhn'),
-            train=True,
             transform=img_transform, download=True
         )
     elif name == mnist_m:
