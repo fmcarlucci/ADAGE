@@ -105,7 +105,7 @@ for p in my_net.parameters():
 # training
 
 for epoch in range(n_epoch):
-
+    my_net.train(True)
     len_dataloader = min(len(dataloader_source), len(dataloader_target))
     data_source_iter = iter(dataloader_source)
     data_target_iter = iter(dataloader_target)
@@ -183,9 +183,11 @@ for epoch in range(n_epoch):
                   % (epoch, i, len_dataloader, err_s_label.cpu().data.numpy(),
                      err_s_domain.cpu().data.numpy(), err_t_domain.cpu().data.numpy()))
 
-    torch.save(my_net, '{0}/mnist_mnistm_model_epoch_{1}.pth'.format(model_root, epoch))
-    s_acc = test(source_dataset_name, epoch)
-    t_acc = test(target_dataset_name, epoch)
+    torch.save(my_net, '{0}/{}_{1}.pth'.format(model_root, run_name, epoch))
+    my_net.train(False)
+    s_acc = test(source_dataset_name, epoch, my_net, image_size)
+    t_acc = test(target_dataset_name, epoch, my_net, image_size)
+    my_net.train(True)
     logger.scalar_summary("acc/source", s_acc, i + epoch * len_dataloader)
     logger.scalar_summary("acc/target", t_acc, i + epoch * len_dataloader)
 

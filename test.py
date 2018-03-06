@@ -3,61 +3,23 @@ import torch.backends.cudnn as cudnn
 import torch.utils.data
 from torch.autograd import Variable
 from torchvision import transforms
-from dataset.data_loader import GetLoader
+from dataset.data_loader import GetLoader, get_dataset
 from torchvision import datasets
 
 
-def test(dataset_name, epoch):
-    assert dataset_name in ['mnist', 'mnist_m']
-
-    model_root = 'models'
-    image_root = os.path.join('dataset', dataset_name)
-
+def test(dataset_name, epoch, my_net, image_size):
+    assert dataset_name in ['mnist', 'mnist_m', 'svhn']
     cuda = True
     cudnn.benchmark = True
     batch_size = 128
-    image_size = 28
     alpha = 0
 
-    """load data"""
-
-    img_transform = transforms.Compose([
-        transforms.RandomResizedCrop(image_size),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
-    ])
-
-    if dataset_name == 'mnist_m':
-        test_list = os.path.join(image_root, 'mnist_m_test_labels.txt')
-
-        dataset = GetLoader(
-            data_root=os.path.join(image_root, 'mnist_m_test'),
-            data_list=test_list,
-            transform=img_transform
-        )
-    else:
-        dataset = datasets.MNIST(
-            root=image_root,
-            train=False,
-            transform=img_transform,
-        )
-
     dataloader = torch.utils.data.DataLoader(
-        dataset=dataset,
+        dataset=get_dataset(dataset_name, image_size, mode="test"),
         batch_size=batch_size,
         shuffle=False,
         num_workers=8
     )
-
-    """ training """
-
-    my_net = torch.load(os.path.join(
-        model_root, 'mnist_mnistm_model_epoch_' + str(epoch) + '.pth'
-    ))
-    my_net = my_net.eval()
-
-    if cuda:
-        my_net = my_net.cuda()
 
     len_dataloader = len(dataloader)
     data_target_iter = iter(dataloader)
