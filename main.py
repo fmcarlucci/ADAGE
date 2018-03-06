@@ -5,9 +5,7 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data
 from torch.autograd import Variable
-from dataset.data_loader import GetLoader
-from torchvision import datasets
-from torchvision import transforms
+from dataset.data_loader import get_dataset
 
 from logger import Logger
 from models.model import CNNModel, Combo
@@ -25,6 +23,8 @@ def get_args():
     parser.add_argument('--DANN_weight', default=1.0, type=float)
     parser.add_argument('--use_deco', action="store_true", help="If true use deco architecture")
     parser.add_argument('--suffix', help="Will be added to end of name", default="")
+    parser.add_argument('--source', default="mnist")
+    parser.add_argument('--target', default="mnistM")
     return parser.parse_args()
 
 
@@ -50,10 +50,6 @@ args = get_args()
 run_name = get_name(args)
 logger = Logger("logs/" + run_name)
 
-source_dataset_name = 'mnist'
-target_dataset_name = 'mnist_m'
-source_image_root = os.path.join('dataset', source_dataset_name)
-target_image_root = os.path.join('dataset', target_dataset_name)
 model_root = 'models'
 
 cuda = True
@@ -68,38 +64,14 @@ manual_seed = random.randint(1, 10000)
 random.seed(manual_seed)
 torch.manual_seed(manual_seed)
 
-# load data
-
-img_transform = transforms.Compose([
-    transforms.RandomResizedCrop(image_size, scale=(0.3, 1.0)),
-    # transforms.RandomCrop(image_size),
-    transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
-])
-
-dataset_source = datasets.MNIST(
-    root=source_image_root,
-    train=True,
-    transform=img_transform, download=True
-)
-
 dataloader_source = torch.utils.data.DataLoader(
-    dataset=dataset_source,
+    dataset=get_dataset(args.source, image_size),
     batch_size=batch_size,
     shuffle=True,
     num_workers=4)
 
-train_list = os.path.join(target_image_root, 'mnist_m_train_labels.txt')
-
-dataset_target = GetLoader(
-    data_root=os.path.join(target_image_root, 'mnist_m_train'),
-    data_list=train_list,
-    transform=img_transform
-)
-
 dataloader_target = torch.utils.data.DataLoader(
-    dataset=dataset_target,
+    dataset=get_dataset(args.target, image_size),
     batch_size=batch_size,
     shuffle=True,
     num_workers=4)
