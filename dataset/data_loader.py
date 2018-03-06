@@ -9,7 +9,7 @@ target_dataset_name = 'mnist_m'
 mnist_image_root = os.path.join('dataset', 'mnist')
 mnist_m_image_root = os.path.join('dataset', 'mnist_m')
 
-datasets = ["mnist", "mnist_m", "svhn"]
+dataset_list = ["mnist", "mnist_m", "svhn"]
 
 
 def get_dataset(name, image_size, mode="train"):

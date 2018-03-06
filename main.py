@@ -25,15 +25,14 @@ def get_args():
     parser.add_argument('--DANN_weight', default=1.0, type=float)
     parser.add_argument('--use_deco', action="store_true", help="If true use deco architecture")
     parser.add_argument('--suffix', help="Will be added to end of name", default="")
-    parser.add_argument('--source', default="mnist", choices=data_loader.datasets)
-    parser.add_argument('--target', default="mnist_m", choices=data_loader.datasets)
+    parser.add_argument('--source', default="mnist", choices=data_loader.dataset_list)
+    parser.add_argument('--target', default="mnist_m", choices=data_loader.dataset_list)
     return parser.parse_args()
 
 
 def get_name(args):
-    name = "%s->%s_lr:%g_batchSize:%d_epochs:%d_DannWeight:%g_imageSize:%d" % (args.source, args.target, args.lr,
-                                                                               args.batch_size, args.epochs,
-                                                                               args.DANN_weight, args.image_size)
+    name = "%lr:%g_batchSize:%d_epochs:%d_DannWeight:%g_imageSize:%d" % (args.lr, args.batch_size, args.epochs,
+                                                                         args.DANN_weight, args.image_size)
     if args.use_deco:
         name += "_deco"
     return name + args.suffix + "_%d" % (time.time() % 100)
@@ -52,7 +51,7 @@ def to_grid(x):
 
 args = get_args()
 run_name = get_name(args)
-logger = Logger("logs/" + run_name)
+logger = Logger("logs/{}_{}/{}".format(args.source,args.target,run_name))
 
 model_root = 'models'
 
@@ -185,7 +184,7 @@ for epoch in range(n_epoch):
                   % (epoch, i, len_dataloader, err_s_label.cpu().data.numpy(),
                      err_s_domain.cpu().data.numpy(), err_t_domain.cpu().data.numpy()))
 
-    torch.save(my_net, '{}/{}_{}.pth'.format(model_root, run_name, epoch))
+    torch.save(my_net, '{}/{}_{}/{}_{}.pth'.format(model_root, args.source, args.target, run_name, epoch))
     my_net.train(False)
     s_acc = test(source_dataset_name, epoch, my_net, image_size)
     t_acc = test(target_dataset_name, epoch, my_net, image_size)
