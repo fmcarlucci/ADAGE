@@ -29,19 +29,19 @@ def get_dataset(name, image_size, mode="train"):
             transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         ])
 
-    if name is "mnist":
+    if name == mnist:
         dataset = datasets.MNIST(
             root=mnist_image_root,
             train=True,
             transform=img_transform, download=True
         )
-    elif name is "svhn":
+    elif name == svhn:
         dataset = datasets.SVHN(
             root=os.path.join('dataset', 'svhn'),
             train=True,
             transform=img_transform, download=True
         )
-    elif name is "mnist_m":
+    elif name == mnist_m:
         train_list = os.path.join(mnist_m_image_root, 'mnist_m_train_labels.txt')
 
         dataset = GetLoader(
