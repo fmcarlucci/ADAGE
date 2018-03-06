@@ -190,12 +190,13 @@ for epoch in range(n_epoch):
                   % (epoch, i, len_dataloader, err_s_label.cpu().data.numpy(),
                      err_s_domain.cpu().data.numpy(), err_t_domain.cpu().data.numpy()))
 
-    torch.save(my_net, '{}/{}_{}/{}_{}.pth'.format(model_root, args.source, args.target, run_name, epoch))
     my_net.train(False)
     s_acc = test(source_dataset_name, epoch, my_net, image_size)
     t_acc = test(target_dataset_name, epoch, my_net, image_size)
     my_net.train(True)
     logger.scalar_summary("acc/source", s_acc, i + epoch * len_dataloader)
     logger.scalar_summary("acc/target", t_acc, i + epoch * len_dataloader)
-
+save_path = '{}/{}_{}/{}_{}.pth'.format(model_root, args.source, args.target, run_name, epoch)
+print("Network saved to {}".format(save_path))
+torch.save(my_net, save_path)
 print('done')
