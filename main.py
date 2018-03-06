@@ -24,7 +24,7 @@ def get_args():
     parser.add_argument('--epochs', default=100, type=int)
     parser.add_argument('--DANN_weight', default=1.0, type=float)
     parser.add_argument('--use_deco', action="store_true", help="If true use deco architecture")
-    parser.add_argument('--suffix', help="Will be added to end of name")
+    parser.add_argument('--suffix', help="Will be added to end of name", default="")
     return parser.parse_args()
 
 
@@ -71,7 +71,7 @@ torch.manual_seed(manual_seed)
 # load data
 
 img_transform = transforms.Compose([
-    transforms.RandomResizedCrop(image_size, scale=(0.3, 1.0)), 
+    transforms.RandomResizedCrop(image_size, scale=(0.3, 1.0)),
     # transforms.RandomCrop(image_size),
     transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0),
     transforms.ToTensor(),
