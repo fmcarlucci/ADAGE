@@ -38,7 +38,7 @@ def get_dataset(name, image_size, mode="train"):
             train=True,
             transform=img_transform, download=True
         )
-    elif name is "mnistM":
+    elif name is "mnist_m":
         train_list = os.path.join(mnist_m_image_root, 'mnist_m_train_labels.txt')
 
         dataset = GetLoader(

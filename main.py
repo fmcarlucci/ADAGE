@@ -24,7 +24,7 @@ def get_args():
     parser.add_argument('--use_deco', action="store_true", help="If true use deco architecture")
     parser.add_argument('--suffix', help="Will be added to end of name", default="")
     parser.add_argument('--source', default="mnist")
-    parser.add_argument('--target', default="mnistM")
+    parser.add_argument('--target', default="mnist_m")
     return parser.parse_args()
 
 
