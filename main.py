@@ -61,6 +61,8 @@ batch_size = args.batch_size
 image_size = args.image_size
 n_epoch = args.epochs
 dann_weight = args.DANN_weight
+source_dataset_name = args.source
+target_dataset_name = args.target
 
 manual_seed = random.randint(1, 10000)
 random.seed(manual_seed)
