@@ -4,12 +4,13 @@ import os
 from torchvision import datasets
 from torchvision import transforms
 
-source_dataset_name = 'mnist'
-target_dataset_name = 'mnist_m'
+mnist = 'mnist'
+mnist_m = 'mnist_m'
+svhn = 'svhn'
 mnist_image_root = os.path.join('dataset', 'mnist')
 mnist_m_image_root = os.path.join('dataset', 'mnist_m')
 
-dataset_list = ["mnist", "mnist_m", "svhn"]
+dataset_list = [mnist, mnist_m, svhn]
 
 
 def get_dataset(name, image_size, mode="train"):
@@ -34,7 +35,7 @@ def get_dataset(name, image_size, mode="train"):
             train=True,
             transform=img_transform, download=True
         )
-    if name is "svhn":
+    elif name is "svhn":
         dataset = datasets.SVHN(
             root=os.path.join('dataset', 'svhn'),
             train=True,
