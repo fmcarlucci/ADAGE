@@ -5,6 +5,8 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data
 from torch.autograd import Variable
+
+from dataset import data_loader
 from dataset.data_loader import get_dataset
 
 from logger import Logger
@@ -23,8 +25,8 @@ def get_args():
     parser.add_argument('--DANN_weight', default=1.0, type=float)
     parser.add_argument('--use_deco', action="store_true", help="If true use deco architecture")
     parser.add_argument('--suffix', help="Will be added to end of name", default="")
-    parser.add_argument('--source', default="mnist")
-    parser.add_argument('--target', default="mnist_m")
+    parser.add_argument('--source', default="mnist", choices=data_loader.datasets)
+    parser.add_argument('--target', default="mnist_m", choices=data_loader.datasets)
     return parser.parse_args()
 
 
@@ -183,7 +185,7 @@ for epoch in range(n_epoch):
                   % (epoch, i, len_dataloader, err_s_label.cpu().data.numpy(),
                      err_s_domain.cpu().data.numpy(), err_t_domain.cpu().data.numpy()))
 
-    torch.save(my_net, '{0}/{}_{1}.pth'.format(model_root, run_name, epoch))
+    torch.save(my_net, '{}/{}_{}.pth'.format(model_root, run_name, epoch))
     my_net.train(False)
     s_acc = test(source_dataset_name, epoch, my_net, image_size)
     t_acc = test(target_dataset_name, epoch, my_net, image_size)
