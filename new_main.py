@@ -1,6 +1,6 @@
 import argparse
 import random
-import os
+import itertools
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data
@@ -44,7 +44,8 @@ def to_np(x):
 
 def to_grid(x):
     channels = x.shape[1]
-    y = x.swapaxes(1, 3).reshape(3, 28 * 3, 28, channels).swapaxes(1, 2).reshape(28 * 3, 28 * 3, channels).squeeze()[np.newaxis, ...]
+    y = x.swapaxes(1, 3).reshape(3, 28 * 3, 28, channels).swapaxes(1, 2).reshape(28 * 3, 28 * 3, channels).squeeze()[
+        np.newaxis, ...]
     print(y.shape)
     return y
 
@@ -73,12 +74,14 @@ dataloader_source = torch.utils.data.DataLoader(
     dataset=get_dataset(args.source, image_size),
     batch_size=batch_size,
     shuffle=True,
+    drop_last=True,
     num_workers=4)
 
 dataloader_target = torch.utils.data.DataLoader(
     dataset=get_dataset(args.target, image_size),
     batch_size=batch_size,
     shuffle=True,
+    drop_last=True,
     num_workers=4)
 
 # load model
@@ -104,98 +107,69 @@ for p in my_net.parameters():
     p.requires_grad = True
 
 # training
-
 for epoch in range(n_epoch):
+    # this must be done each epoch, or zip will exhaust
+    if len(dataloader_source) > len(dataloader_target):
+        len_dataloader = len(dataloader_source)
+        combined_loader = zip(dataloader_source, itertools.cycle(dataloader_target))
+    else:
+        len_dataloader = len(dataloader_target)
+        combined_loader = zip(itertools.cycle(dataloader_source), dataloader_target)
     my_net.train(True)
-    len_dataloader = min(len(dataloader_source), len(dataloader_target))
-    data_source_iter = iter(dataloader_source)
-    data_target_iter = iter(dataloader_target)
-
-    i = 0
-    while i < len_dataloader:
-
-        p = float(i + epoch * len_dataloader) / n_epoch / len_dataloader
-        lambda_val = 2. / (1. + np.exp(-10 * p)) - 1
-
-        # training model using source data
-        data_source = data_source_iter.next()
-        s_img, s_label = data_source
-
-        my_net.zero_grad()
-        batch_size = len(s_label)
-
-        input_img = torch.FloatTensor(batch_size, 3, image_size, image_size)
-        class_label = torch.LongTensor(batch_size)
-        domain_label = torch.zeros(batch_size)
-        domain_label = domain_label.long()
-
+    for batch_idx, (source_batch, target_batch) in enumerate(combined_loader):
+        source_domain_label = torch.zeros(batch_size).long()
+        target_domain_label = torch.ones(batch_size).long()
+        s_img, s_label = source_batch
+        t_img, _ = target_batch
         if cuda:
             s_img = s_img.cuda()
             s_label = s_label.cuda()
-            input_img = input_img.cuda()
-            class_label = class_label.cuda()
-            domain_label = domain_label.cuda()
+            t_img = t_img.cuda()
+            source_domain_label = source_domain_label.cuda()
+            target_domain_label = target_domain_label.cuda()
 
-        input_img.resize_as_(s_img).copy_(s_img)
-        class_label.resize_as_(s_label).copy_(s_label)
-        inputv_img = Variable(input_img)
-        classv_label = Variable(class_label)
-        domainv_label = Variable(domain_label)
+        p = float(batch_idx + epoch * len_dataloader) / n_epoch / len_dataloader  # TODO: check this line
+        lambda_val = 2. / (1. + np.exp(-10 * p)) - 1
 
-        class_output, domain_output = my_net(input_data=inputv_img, lambda_val=lambda_val)
-        err_s_label = loss_class(class_output, classv_label)
-        err_s_domain = loss_domain(domain_output, domainv_label)
+        optimizer.zero_grad()
+
+        class_output, domain_output = my_net(input_data=Variable(s_img), lambda_val=lambda_val)
+        err_s_label = loss_class(class_output, Variable(s_label))
+        err_s_domain = loss_domain(domain_output, Variable(source_domain_label))
 
         # training model using target data
-        data_target = data_target_iter.next()
-        t_img, _ = data_target
 
-        batch_size = len(t_img)
-
-        input_img = torch.FloatTensor(batch_size, 3, image_size, image_size)
-        domain_label = torch.ones(batch_size)
-        domain_label = domain_label.long()
-
-        if cuda:
-            t_img = t_img.cuda()
-            input_img = input_img.cuda()
-            domain_label = domain_label.cuda()
-
-        input_img.resize_as_(t_img).copy_(t_img)
-        inputv_img = Variable(input_img)
-        domainv_label = Variable(domain_label)
-
-        _, domain_output = my_net(input_data=inputv_img, lambda_val=lambda_val)
-        err_t_domain = loss_domain(domain_output, domainv_label)
+        _, domain_output = my_net(input_data=Variable(t_img), lambda_val=lambda_val)
+        err_t_domain = loss_domain(domain_output, Variable(target_domain_label))
         err = dann_weight * err_t_domain + dann_weight * err_s_domain + err_s_label
         err.backward()
         optimizer.step()
 
-        if i is 0:
+        if batch_idx is 0:
             if args.use_deco:
                 source_images = my_net.deco(Variable(s_img[:9]))
                 target_images = my_net.deco(Variable(t_img[:9]))
             else:
                 source_images = Variable(s_img[:9])
                 target_images = Variable(t_img[:9])
-            logger.image_summary("images/source", to_grid(to_np(source_images)), i + epoch * len_dataloader)
-            logger.image_summary("images/target", to_grid(to_np(target_images)), i + epoch * len_dataloader)
+            logger.image_summary("images/source", to_grid(to_np(source_images)), batch_idx + epoch * len_dataloader)
+            logger.image_summary("images/target", to_grid(to_np(target_images)), batch_idx + epoch * len_dataloader)
 
-        i += 1
-
-        if (i % 200) == 0:
-            logger.scalar_summary("loss/source", err_s_label, i + epoch * len_dataloader)
-            logger.scalar_summary("loss/domain", (err_s_domain + err_t_domain) / 2, i + epoch * len_dataloader)
+        if (batch_idx % 200) == 0:
+            logger.scalar_summary("loss/source", err_s_label, batch_idx + epoch * len_dataloader)
+            logger.scalar_summary("loss/domain", (err_s_domain + err_t_domain) / 2, batch_idx + epoch * len_dataloader)
             print('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \
-                  % (epoch, i, len_dataloader, err_s_label.cpu().data.numpy(),
+                  % (epoch, batch_idx, len_dataloader, err_s_label.cpu().data.numpy(),
                      err_s_domain.cpu().data.numpy(), err_t_domain.cpu().data.numpy()))
 
     my_net.train(False)
     s_acc = test(source_dataset_name, epoch, my_net, image_size)
     t_acc = test(target_dataset_name, epoch, my_net, image_size)
-    my_net.train(True)
-    logger.scalar_summary("acc/source", s_acc, i + epoch * len_dataloader)
-    logger.scalar_summary("acc/target", t_acc, i + epoch * len_dataloader)
+    logger.scalar_summary("acc/source", s_acc, batch_idx + epoch * len_dataloader)
+    logger.scalar_summary("acc/target", t_acc, batch_idx + epoch * len_dataloader)
+    logger.scalar_summary("aux/p", p, batch_idx + epoch * len_dataloader)
+    logger.scalar_summary("aux/lambda", lambda_val, batch_idx + epoch * len_dataloader)
+
 save_path = '{}/{}_{}/{}_{}.pth'.format(model_root, args.source, args.target, run_name, epoch)
 print("Network saved to {}".format(save_path))
 torch.save(my_net, save_path)

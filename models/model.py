@@ -8,14 +8,14 @@ from torchvision.models.resnet import BasicBlock
 class ReverseLayerF(Function):
 
     @staticmethod
-    def forward(ctx, x, alpha):
-        ctx.alpha = alpha
+    def forward(ctx, x, lambda_val):
+        ctx.lambda_val = lambda_val
 
         return x.view_as(x)
 
     @staticmethod
     def backward(ctx, grad_output):
-        output = grad_output.neg() * ctx.alpha
+        output = grad_output.neg() * ctx.lambda_val
 
         return output, None
 
@@ -26,9 +26,9 @@ class Combo(nn.Module):
         self.deco = Deco(deco_block, [n_deco], deco_weight)
         self.net = CNNModel()
 
-    def forward(self, input_data, alpha):
+    def forward(self, input_data, lambda_val):
         input_data = self.deco(input_data)
-        return self.net(input_data, alpha)
+        return self.net(input_data, lambda_val)
 
 
 class Deco(nn.Module):
@@ -120,11 +120,11 @@ class CNNModel(nn.Module):
         self.domain_classifier.add_module('d_fc2', nn.Linear(100, 2))
         self.domain_classifier.add_module('d_softmax', nn.LogSoftmax())
 
-    def forward(self, input_data, alpha):
+    def forward(self, input_data, lambda_val):
         input_data = input_data.expand(input_data.data.shape[0], 3, 28, 28)
         feature = self.feature(input_data)
         feature = feature.view(-1, 50 * 4 * 4)
-        reverse_feature = ReverseLayerF.apply(feature, alpha)
+        reverse_feature = ReverseLayerF.apply(feature, lambda_val)
         class_output = self.class_classifier(feature)
         domain_output = self.domain_classifier(reverse_feature)
 

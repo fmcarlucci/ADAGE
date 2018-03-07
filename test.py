@@ -12,7 +12,7 @@ def test(dataset_name, epoch, my_net, image_size):
     cuda = True
     cudnn.benchmark = True
     batch_size = 128
-    alpha = 0
+    lambda_val = 0
 
     dataloader = torch.utils.data.DataLoader(
         dataset=get_dataset(dataset_name, image_size, mode="test"),
@@ -50,7 +50,7 @@ def test(dataset_name, epoch, my_net, image_size):
         inputv_img = Variable(input_img)
         classv_label = Variable(class_label)
 
-        class_output, _ = my_net(input_data=inputv_img, alpha=alpha)
+        class_output, _ = my_net(input_data=inputv_img, lambda_val=lambda_val)
         pred = class_output.data.max(1, keepdim=True)[1]
         n_correct += pred.eq(classv_label.data.view_as(pred)).cpu().sum()
         n_total += batch_size
