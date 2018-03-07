@@ -3,7 +3,6 @@ import math
 import torch
 import torch.nn as nn
 from torch.autograd import Function
-from torch.autograd import Variable
 from torch.nn import Parameter
 from torchvision.models.resnet import BasicBlock
 
@@ -23,9 +22,9 @@ class ReverseLayerF(Function):
 
 
 class Combo(nn.Module):
-    def __init__(self, deco_weight=0.001, n_deco=4, deco_block=BasicBlock, classifier=None):
+    def __init__(self, deco_weight=0.001, n_deco=4, deco_block=BasicBlock, classifier=None, train_deco_weight=False):
         super(Combo, self).__init__()
-        self.deco = Deco(deco_block, [n_deco], deco_weight)
+        self.deco = Deco(deco_block, [n_deco], deco_weight, train_deco_weight)
         self.net = get_classifier(classifier)
 
     def forward(self, input_data, lambda_val):
@@ -34,7 +33,7 @@ class Combo(nn.Module):
 
 
 class Deco(nn.Module):
-    def __init__(self, block, layers, deco_weight, train_deco_weight = False):
+    def __init__(self, block, layers, deco_weight, train_deco_weight):
         self.inplanes = 64
         super(Deco, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=5, stride=1, padding=2,
@@ -55,10 +54,8 @@ class Deco(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
-        self.deco_weight = Parameter(torch.FloatTensor(1), requires_grad=train_deco_weight).fill_(deco_weight).cuda()
-        if train_deco_weight:
-            self.deco_weight.requires_grad = True
-
+        self.deco_weight = Parameter(torch.FloatTensor(1), requires_grad=train_deco_weight)
+        self.deco_weight.data.fill_(deco_weight)
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
@@ -115,10 +112,10 @@ class MnistModel(BasicDANN):
         super(MnistModel, self).__init__()
         print("Using LeNet")
         self.features = nn.Sequential(
-            nn.Conv2d(3, 64, 5),
+            nn.Conv2d(3, 32, 5),
             nn.ReLU(True),
             nn.MaxPool2d(2, 2),
-            nn.Conv2d(64, 48, 5),
+            nn.Conv2d(32, 48, 5),
             nn.ReLU(True),
             nn.MaxPool2d(2, 2)
         )
@@ -145,24 +142,28 @@ class SVHNModel(BasicDANN):
         self.features = nn.Sequential(
             nn.Conv2d(3, 64, 5),
             nn.ReLU(True),
-            nn.MaxPool2d(2, 2),
-            nn.Conv2d(64, 48, 5),
+            nn.MaxPool2d(3, 2),
+            nn.Conv2d(64, 64, 5),
             nn.ReLU(True),
-            nn.MaxPool2d(2, 2)
+            nn.MaxPool2d(3, 2),
+            nn.Conv2d(64, 128, 5),
+            nn.ReLU(True)
         )
         self.domain_classifier = nn.Sequential(
-            nn.Linear(48 * 4 * 4, 100),
+            nn.Linear(128 * 4 * 4, 1024),
             nn.ReLU(True),
-            nn.Linear(100, 2),
-            nn.LogSoftmax()
+            nn.Linear(1024, 1024),
+            nn.ReLU(True),
+            nn.Linear(1024, 2),
+            nn.LogSoftmax(1)
         )
         self.class_classifier = nn.Sequential(
-            nn.Linear(48 * 4 * 4, 100),
+            nn.Linear(128 * 4 * 4, 3072),
             nn.ReLU(True),
-            nn.Linear(100, 100),
+            nn.Linear(3072, 2048),
             nn.ReLU(True),
-            nn.Linear(100, 10),
-            nn.Softmax()
+            nn.Linear(2048, 10),
+            nn.LogSoftmax(1)
         )
 
 

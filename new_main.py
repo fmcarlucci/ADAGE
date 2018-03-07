@@ -24,10 +24,12 @@ def get_args():
     parser.add_argument('--epochs', default=100, type=int)
     parser.add_argument('--DANN_weight', default=1.0, type=float)
     parser.add_argument('--use_deco', action="store_true", help="If true use deco architecture")
+    parser.add_argument('--train_deco_weight', action="store_true")
     parser.add_argument('--suffix', help="Will be added to end of name", default="")
     parser.add_argument('--source', default="mnist", choices=data_loader.dataset_list)
     parser.add_argument('--target', default="mnist_m", choices=data_loader.dataset_list)
     parser.add_argument('--classifier', default=None, choices=classifier_list.keys())
+    parser.add_argument('--tmp_log', action="store_true", help="If set, logger will save to /tmp instead")
     return parser.parse_args()
 
 
@@ -36,6 +38,8 @@ def get_name(args, seed):
                                                      args.DANN_weight, args.image_size)
     if args.use_deco:
         name += "_deco"
+    if args.train_deco_weight:
+        name += "_trainWeight"
     if args.classifier:
         name += "_" + args.classifier
     if args.suffix:
@@ -58,7 +62,10 @@ def to_grid(x):
 args = get_args()
 manual_seed = random.randint(1, 1000)
 run_name = get_name(args, manual_seed)
-logger = Logger("logs/{}_{}/{}".format(args.source, args.target, run_name))
+log_folder = "logs/"
+if args.tmp_log:
+    log_folder = "/tmp/"
+logger = Logger("{}/{}_{}/{}".format(log_folder, args.source, args.target, run_name))
 
 model_root = 'models'
 
@@ -92,12 +99,11 @@ dataloader_target = torch.utils.data.DataLoader(
 # load model
 
 if args.use_deco:
-    my_net = Combo(classifier=args.classifier)
+    my_net = Combo(classifier=args.classifier, train_deco_weight=args.train_deco_weight)
 else:
     my_net = get_classifier(args.classifier)
 
 # setup optimizer
-
 optimizer = optim.Adam(my_net.parameters(), lr=lr)
 
 loss_class = torch.nn.NLLLoss()
@@ -135,7 +141,7 @@ for epoch in range(n_epoch):
             target_domain_label = target_domain_label.cuda()
 
         p = float(absolute_iter_count) / n_epoch / len_dataloader
-        lambda_val = 2. / (1. + np.exp(-10 * p)) - 1
+        lambda_val = 2. / (1. + np.exp(-10 * p)) - 1  # TODO: consider changing 10 to 2 to have lambda=1 for longer
 
         optimizer.zero_grad()
 
