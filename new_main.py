@@ -176,6 +176,7 @@ for epoch in range(n_epoch):
     logger.scalar_summary("aux/p", p, absolute_iter_count)
     logger.scalar_summary("aux/lambda", lambda_val, absolute_iter_count)
     if args.use_deco:
+        logger.scalar_summary("aux/deco_to_image_ratio", my_net.deco.ratio.data.cpu()[0], absolute_iter_count)
         logger.scalar_summary("aux/deco_weight", my_net.deco.deco_weight.data.cpu()[0], absolute_iter_count)
 
 save_path = '{}/{}_{}/{}_{}.pth'.format(model_root, args.source, args.target, run_name, epoch)

@@ -36,6 +36,7 @@ class Combo(nn.Module):
 class Deco(nn.Module):
     def __init__(self, block, layers, deco_weight, train_deco_weight = False):
         self.inplanes = 64
+        self.ratio = 1
         super(Deco, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=5, stride=1, padding=2,
                                bias=False)
@@ -89,6 +90,7 @@ class Deco(nn.Module):
         #        x = self.layer2(x)
         # x = nn.functional.upsample(x, scale_factor=2, mode='bilinear')
         x = self.deco_weight * x
+        self.ratio = input_data.norm() / x.norm()
         return input_data + x  # , x.norm() / input_data.shape[0]
 
 
