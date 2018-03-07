@@ -11,12 +11,12 @@ mnist_image_root = os.path.join('dataset', 'mnist')
 mnist_m_image_root = os.path.join('dataset', 'mnist_m')
 
 dataset_list = [mnist, mnist_m, svhn]
-
+dataset_cache = {}
 
 def get_dataset(name, image_size, mode="train"):
     if mode is "train":
         img_transform = transforms.Compose([
-            transforms.RandomResizedCrop(image_size, scale=(0.2, 1.0)),
+            transforms.RandomResizedCrop(image_size, scale=(0.5, 1.0)),
             # transforms.RandomCrop(image_size),
             transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0),
             transforms.ToTensor(),
@@ -29,25 +29,28 @@ def get_dataset(name, image_size, mode="train"):
             transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         ])
 
-    if name == mnist:
-        dataset = datasets.MNIST(
-            root=mnist_image_root,
-            train=True,
-            transform=img_transform, download=True
-        )
-    elif name == svhn:
-        dataset = datasets.SVHN(
-            root=os.path.join('dataset', 'svhn'),
-            transform=img_transform, download=True
-        )
-    elif name == mnist_m:
-        train_list = os.path.join(mnist_m_image_root, 'mnist_m_train_labels.txt')
+    dataset = dataset_cache.get((name, mode))
+    if dataset is None:
+        if name == mnist:
+            dataset = datasets.MNIST(
+                root=mnist_image_root,
+                train=True,
+                transform=img_transform, download=True
+            )
+        elif name == svhn:
+            dataset = datasets.SVHN(
+                root=os.path.join('dataset', 'svhn'),
+                transform=img_transform, download=True
+            )
+        elif name == mnist_m:
+            train_list = os.path.join(mnist_m_image_root, 'mnist_m_train_labels.txt')
 
-        dataset = GetLoader(
-            data_root=os.path.join(mnist_m_image_root, 'mnist_m_train'),
-            data_list=train_list,
-            transform=img_transform
-        )
+            dataset = GetLoader(
+                data_root=os.path.join(mnist_m_image_root, 'mnist_m_train'),
+                data_list=train_list,
+                transform=img_transform
+            )
+        dataset_cache[(name, mode)] = dataset
     return dataset
 
 
