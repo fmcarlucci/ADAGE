@@ -18,7 +18,7 @@ def test(dataset_name, epoch, my_net, image_size):
         dataset=get_dataset(dataset_name, image_size, mode="test"),
         batch_size=batch_size,
         shuffle=False,
-        num_workers=8
+        num_workers=4
     )
 
     len_dataloader = len(dataloader)

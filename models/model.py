@@ -1,12 +1,14 @@
 import math
 
+import torch
 import torch.nn as nn
 from torch.autograd import Function
+from torch.autograd import Variable
+from torch.nn import Parameter
 from torchvision.models.resnet import BasicBlock
 
 
 class ReverseLayerF(Function):
-
     @staticmethod
     def forward(ctx, x, lambda_val):
         ctx.lambda_val = lambda_val
@@ -21,10 +23,10 @@ class ReverseLayerF(Function):
 
 
 class Combo(nn.Module):
-    def __init__(self, deco_weight=0.001, n_deco=4, deco_block=BasicBlock):
+    def __init__(self, deco_weight=0.001, n_deco=4, deco_block=BasicBlock, classifier=None):
         super(Combo, self).__init__()
         self.deco = Deco(deco_block, [n_deco], deco_weight)
-        self.net = CNNModel()
+        self.net = get_classifier(classifier)
 
     def forward(self, input_data, lambda_val):
         input_data = self.deco(input_data)
@@ -32,7 +34,7 @@ class Combo(nn.Module):
 
 
 class Deco(nn.Module):
-    def __init__(self, block, layers, deco_weight):
+    def __init__(self, block, layers, deco_weight, train_deco_weight = False):
         self.inplanes = 64
         super(Deco, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=5, stride=1, padding=2,
@@ -53,7 +55,10 @@ class Deco(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
-        self.deco_weight = deco_weight
+        self.deco_weight = Parameter(torch.FloatTensor(1), requires_grad=train_deco_weight).fill_(deco_weight).cuda()
+        if train_deco_weight:
+            self.deco_weight.requires_grad = True
+
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
@@ -84,11 +89,90 @@ class Deco(nn.Module):
         #        x = self.layer2(x)
         # x = nn.functional.upsample(x, scale_factor=2, mode='bilinear')
         x = self.deco_weight * x
-        return input_data + x #, x.norm() / input_data.shape[0]
+        return input_data + x  # , x.norm() / input_data.shape[0]
+
+
+class BasicDANN(nn.Module):
+    def __init__(self):
+        super(BasicDANN, self).__init__()
+        self.features = None
+        self.domain_classifier = None
+        self.class_classifier = None
+
+    def forward(self, input_data, lambda_val):
+        input_data = input_data.expand(input_data.data.shape[0], 3, input_data.data.shape[2], input_data.data.shape[3])
+        feature = self.features(input_data)
+        feature = feature.view(input_data.shape[0], -1)
+        reverse_feature = ReverseLayerF.apply(feature, lambda_val)
+        class_output = self.class_classifier(feature)
+        domain_output = self.domain_classifier(reverse_feature)
+
+        return class_output, domain_output
+
+
+class MnistModel(BasicDANN):
+    def __init__(self):
+        super(MnistModel, self).__init__()
+        print("Using LeNet")
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 64, 5),
+            nn.ReLU(True),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(64, 48, 5),
+            nn.ReLU(True),
+            nn.MaxPool2d(2, 2)
+        )
+        self.domain_classifier = nn.Sequential(
+            nn.Linear(48 * 4 * 4, 100),
+            nn.ReLU(True),
+            nn.Linear(100, 2),
+            nn.LogSoftmax(1)
+        )
+        self.class_classifier = nn.Sequential(
+            nn.Linear(48 * 4 * 4, 100),
+            nn.ReLU(True),
+            nn.Linear(100, 100),
+            nn.ReLU(True),
+            nn.Linear(100, 10),
+            nn.LogSoftmax(1)
+        )
+
+
+class SVHNModel(BasicDANN):
+    def __init__(self):
+        super(SVHNModel, self).__init__()
+        print("Using SVHN")
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 64, 5),
+            nn.ReLU(True),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(64, 48, 5),
+            nn.ReLU(True),
+            nn.MaxPool2d(2, 2)
+        )
+        self.domain_classifier = nn.Sequential(
+            nn.Linear(48 * 4 * 4, 100),
+            nn.ReLU(True),
+            nn.Linear(100, 2),
+            nn.LogSoftmax()
+        )
+        self.class_classifier = nn.Sequential(
+            nn.Linear(48 * 4 * 4, 100),
+            nn.ReLU(True),
+            nn.Linear(100, 100),
+            nn.ReLU(True),
+            nn.Linear(100, 10),
+            nn.Softmax()
+        )
+
+
+def get_classifier(name):
+    if name:
+        return classifier_list[name]()
+    return CNNModel()
 
 
 class CNNModel(nn.Module):
-
     def __init__(self):
         super(CNNModel, self).__init__()
         self.feature = nn.Sequential()
@@ -111,14 +195,14 @@ class CNNModel(nn.Module):
         self.class_classifier.add_module('c_bn2', nn.BatchNorm2d(100))
         self.class_classifier.add_module('c_relu2', nn.ReLU(True))
         self.class_classifier.add_module('c_fc3', nn.Linear(100, 10))
-        self.class_classifier.add_module('c_softmax', nn.LogSoftmax())
+        self.class_classifier.add_module('c_softmax', nn.LogSoftmax(1))
 
         self.domain_classifier = nn.Sequential()
         self.domain_classifier.add_module('d_fc1', nn.Linear(50 * 4 * 4, 100))
         self.domain_classifier.add_module('d_bn1', nn.BatchNorm2d(100))
         self.domain_classifier.add_module('d_relu1', nn.ReLU(True))
         self.domain_classifier.add_module('d_fc2', nn.Linear(100, 2))
-        self.domain_classifier.add_module('d_softmax', nn.LogSoftmax())
+        self.domain_classifier.add_module('d_softmax', nn.LogSoftmax(1))
 
     def forward(self, input_data, lambda_val):
         input_data = input_data.expand(input_data.data.shape[0], 3, 28, 28)
@@ -129,3 +213,8 @@ class CNNModel(nn.Module):
         domain_output = self.domain_classifier(reverse_feature)
 
         return class_output, domain_output
+
+
+classifier_list = {"roided_lenet": CNNModel,
+                   "mnist": MnistModel,
+                   "svhn": SVHNModel}

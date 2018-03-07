@@ -10,7 +10,7 @@ from dataset import data_loader
 from dataset.data_loader import get_dataset
 
 from logger import Logger
-from models.model import CNNModel, Combo
+from models.model import CNNModel, Combo, classifier_list, get_classifier
 import numpy as np
 from test import test
 import time
@@ -27,15 +27,20 @@ def get_args():
     parser.add_argument('--suffix', help="Will be added to end of name", default="")
     parser.add_argument('--source', default="mnist", choices=data_loader.dataset_list)
     parser.add_argument('--target', default="mnist_m", choices=data_loader.dataset_list)
+    parser.add_argument('--classifier', default=None, choices=classifier_list.keys())
     return parser.parse_args()
 
 
-def get_name(args):
-    name = "lr:%g_batchSize:%d_epochs:%d_DannWeight:%g_imageSize:%d" % (args.lr, args.batch_size, args.epochs,
-                                                                        args.DANN_weight, args.image_size)
+def get_name(args, seed):
+    name = "lr:%g_BS:%d_epochs:%d_DannW:%g_IS:%d" % (args.lr, args.batch_size, args.epochs,
+                                                     args.DANN_weight, args.image_size)
     if args.use_deco:
         name += "_deco"
-    return name + args.suffix + "_%d" % (time.time() % 100)
+    if args.classifier:
+        name += "_" + args.classifier
+    if args.suffix:
+        name += "_" + args.suffix
+    return name + "_%d" % (seed)
 
 
 def to_np(x):
@@ -51,7 +56,8 @@ def to_grid(x):
 
 
 args = get_args()
-run_name = get_name(args)
+manual_seed = random.randint(1, 1000)
+run_name = get_name(args, manual_seed)
 logger = Logger("logs/{}_{}/{}".format(args.source, args.target, run_name))
 
 model_root = 'models'
@@ -66,7 +72,6 @@ dann_weight = args.DANN_weight
 source_dataset_name = args.source
 target_dataset_name = args.target
 
-manual_seed = random.randint(1, 10000)
 random.seed(manual_seed)
 torch.manual_seed(manual_seed)
 
@@ -87,9 +92,9 @@ dataloader_target = torch.utils.data.DataLoader(
 # load model
 
 if args.use_deco:
-    my_net = Combo()
+    my_net = Combo(classifier=args.classifier)
 else:
-    my_net = CNNModel()
+    my_net = get_classifier(args.classifier)
 
 # setup optimizer
 
@@ -117,6 +122,7 @@ for epoch in range(n_epoch):
         combined_loader = zip(itertools.cycle(dataloader_source), dataloader_target)
     my_net.train(True)
     for batch_idx, (source_batch, target_batch) in enumerate(combined_loader):
+        absolute_iter_count = batch_idx + epoch * len_dataloader
         source_domain_label = torch.zeros(batch_size).long()
         target_domain_label = torch.ones(batch_size).long()
         s_img, s_label = source_batch
@@ -128,7 +134,7 @@ for epoch in range(n_epoch):
             source_domain_label = source_domain_label.cuda()
             target_domain_label = target_domain_label.cuda()
 
-        p = float(batch_idx + epoch * len_dataloader) / n_epoch / len_dataloader  # TODO: check this line
+        p = float(absolute_iter_count) / n_epoch / len_dataloader
         lambda_val = 2. / (1. + np.exp(-10 * p)) - 1
 
         optimizer.zero_grad()
@@ -152,12 +158,12 @@ for epoch in range(n_epoch):
             else:
                 source_images = Variable(s_img[:9])
                 target_images = Variable(t_img[:9])
-            logger.image_summary("images/source", to_grid(to_np(source_images)), batch_idx + epoch * len_dataloader)
-            logger.image_summary("images/target", to_grid(to_np(target_images)), batch_idx + epoch * len_dataloader)
+            logger.image_summary("images/source", to_grid(to_np(source_images)), absolute_iter_count)
+            logger.image_summary("images/target", to_grid(to_np(target_images)), absolute_iter_count)
 
         if (batch_idx % 200) == 0:
-            logger.scalar_summary("loss/source", err_s_label, batch_idx + epoch * len_dataloader)
-            logger.scalar_summary("loss/domain", (err_s_domain + err_t_domain) / 2, batch_idx + epoch * len_dataloader)
+            logger.scalar_summary("loss/source", err_s_label, absolute_iter_count)
+            logger.scalar_summary("loss/domain", (err_s_domain + err_t_domain) / 2, absolute_iter_count)
             print('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \
                   % (epoch, batch_idx, len_dataloader, err_s_label.cpu().data.numpy(),
                      err_s_domain.cpu().data.numpy(), err_t_domain.cpu().data.numpy()))
@@ -165,10 +171,12 @@ for epoch in range(n_epoch):
     my_net.train(False)
     s_acc = test(source_dataset_name, epoch, my_net, image_size)
     t_acc = test(target_dataset_name, epoch, my_net, image_size)
-    logger.scalar_summary("acc/source", s_acc, batch_idx + epoch * len_dataloader)
-    logger.scalar_summary("acc/target", t_acc, batch_idx + epoch * len_dataloader)
-    logger.scalar_summary("aux/p", p, batch_idx + epoch * len_dataloader)
-    logger.scalar_summary("aux/lambda", lambda_val, batch_idx + epoch * len_dataloader)
+    logger.scalar_summary("acc/source", s_acc, absolute_iter_count)
+    logger.scalar_summary("acc/target", t_acc, absolute_iter_count)
+    logger.scalar_summary("aux/p", p, absolute_iter_count)
+    logger.scalar_summary("aux/lambda", lambda_val, absolute_iter_count)
+    if args.use_deco:
+        logger.scalar_summary("aux/deco_weight", my_net.deco.deco_weight.data.cpu()[0], absolute_iter_count)
 
 save_path = '{}/{}_{}/{}_{}.pth'.format(model_root, args.source, args.target, run_name, epoch)
 print("Network saved to {}".format(save_path))
