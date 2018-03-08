@@ -53,7 +53,8 @@ def to_np(x):
 
 def to_grid(x):
     channels = x.shape[1]
-    y = x.swapaxes(1, 3).reshape(3, 28 * 3, 28, channels).swapaxes(1, 2).reshape(28 * 3, 28 * 3, channels).squeeze()[
+    s = x.shape[2]
+    y = x.swapaxes(1, 3).reshape(3, s * 3, s, channels).swapaxes(1, 2).reshape(s * 3, s * 3, channels).squeeze()[
         np.newaxis, ...]
     print(y.shape)
     return y
