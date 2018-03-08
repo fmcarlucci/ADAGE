@@ -155,7 +155,7 @@ class SVHNModel(BasicDANN):
             nn.ReLU(True)
         )
         self.domain_classifier = nn.Sequential(
-            nn.Linear(128 * 4 * 4, 1024),
+            nn.Linear(128 * 8 * 8, 1024),
             nn.ReLU(True),
             nn.Linear(1024, 1024),
             nn.ReLU(True),
@@ -163,7 +163,7 @@ class SVHNModel(BasicDANN):
             nn.LogSoftmax(1)
         )
         self.class_classifier = nn.Sequential(
-            nn.Linear(128 * 4 * 4, 3072),
+            nn.Linear(128 * 8 * 8, 3072),
             nn.ReLU(True),
             nn.Linear(3072, 2048),
             nn.ReLU(True),
