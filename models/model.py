@@ -146,26 +146,33 @@ class SVHNModel(BasicDANN):
         print("Using SVHN")
         self.features = nn.Sequential(
             nn.Conv2d(3, 64, 5, padding=2),
+            nn.Dropout(0.1, True),
             nn.ReLU(True),
             nn.MaxPool2d(3, 2, padding=1),
             nn.Conv2d(64, 64, 5, padding=2),
+            nn.Dropout(0.25, True),
             nn.ReLU(True),
             nn.MaxPool2d(3, 2, padding=1),
             nn.Conv2d(64, 128, 5, padding=2),
+            nn.Dropout(0.25, True),
             nn.ReLU(True)
         )
         self.domain_classifier = nn.Sequential(
             nn.Linear(128 * 8 * 8, 1024),
+            nn.Dropout(0.5, True),
             nn.ReLU(True),
             nn.Linear(1024, 1024),
+            nn.Dropout(0.5, True),
             nn.ReLU(True),
             nn.Linear(1024, 2),
             nn.LogSoftmax(1)
         )
         self.class_classifier = nn.Sequential(
             nn.Linear(128 * 8 * 8, 3072),
+            nn.Dropout(0.5, True),
             nn.ReLU(True),
             nn.Linear(3072, 2048),
+            nn.Dropout(0.5, True),
             nn.ReLU(True),
             nn.Linear(2048, 10),
             nn.LogSoftmax(1)
