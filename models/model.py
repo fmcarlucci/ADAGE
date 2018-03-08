@@ -79,7 +79,7 @@ class Deco(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, input_data):
-        input_data = input_data.expand(input_data.data.shape[0], 3, 28, 28)
+        input_data = input_data.expand(input_data.data.shape[0], 3, input_data.data.shape[2], input_data.data.shape[3])
         x = self.conv1(input_data)
         x = self.bn1(x)
         x = self.relu(x)
