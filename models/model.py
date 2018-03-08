@@ -2,7 +2,7 @@ import math
 
 import torch
 import torch.nn as nn
-from torch.autograd import Function
+from torch.autograd import Function, Variable
 from torch.nn import Parameter
 from torchvision.models.resnet import BasicBlock
 
@@ -55,7 +55,10 @@ class Deco(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
-        self.deco_weight = Parameter(torch.FloatTensor(1), requires_grad=train_deco_weight)
+        if train_deco_weight:
+            self.deco_weight = Parameter(torch.FloatTensor(1), requires_grad=True)
+        else:
+            self.deco_weight = Variable(torch.FloatTensor(1)).cuda()
         self.deco_weight.data.fill_(deco_weight)
 
     def _make_layer(self, block, planes, blocks, stride=1):
