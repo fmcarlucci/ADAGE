@@ -145,13 +145,13 @@ class SVHNModel(BasicDANN):
         super(SVHNModel, self).__init__()
         print("Using SVHN")
         self.features = nn.Sequential(
-            nn.Conv2d(3, 64, 5),
+            nn.Conv2d(3, 64, 5, padding=2),
             nn.ReLU(True),
-            nn.MaxPool2d(3, 2),
-            nn.Conv2d(64, 64, 5),
+            nn.MaxPool2d(3, 2, padding=1),
+            nn.Conv2d(64, 64, 5, padding=2),
             nn.ReLU(True),
-            nn.MaxPool2d(3, 2),
-            nn.Conv2d(64, 128, 5),
+            nn.MaxPool2d(3, 2, padding=1),
+            nn.Conv2d(64, 128, 5, padding=2),
             nn.ReLU(True)
         )
         self.domain_classifier = nn.Sequential(
