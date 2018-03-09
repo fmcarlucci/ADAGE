@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.autograd import Function, Variable
 from torch.nn import Parameter
 from torchvision.models.resnet import BasicBlock
-
+import torch.nn.functional as F
 
 class ReverseLayerF(Function):
     @staticmethod
@@ -19,6 +19,10 @@ class ReverseLayerF(Function):
         output = grad_output.neg() * ctx.lambda_val
 
         return output, None
+
+
+def entropy_loss(x):
+    return torch.mean(-F.softmax(x, 1) * F.log_softmax(x, 1))
 
 
 class Combo(nn.Module):
