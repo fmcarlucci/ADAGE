@@ -180,7 +180,7 @@ for epoch in range(n_epoch):
             logger.image_summary("images/source", to_grid(to_np(source_images)), absolute_iter_count)
             logger.image_summary("images/target", to_grid(to_np(target_images)), absolute_iter_count)
 
-        if (batch_idx % 200) == 0:
+        if (batch_idx % (len_dataloader/2 + 1)) == 0:
             logger.scalar_summary("loss/source", err_s_label, absolute_iter_count)
             logger.scalar_summary("loss/domain", (err_s_domain + err_t_domain) / 2, absolute_iter_count)
             print('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \
