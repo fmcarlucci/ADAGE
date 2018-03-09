@@ -26,6 +26,7 @@ def get_args():
     parser.add_argument('--batch_size', default=128, type=int)
     parser.add_argument('--epochs', default=100, type=int)
     parser.add_argument('--DANN_weight', default=1.0, type=float)
+    parser.add_argument('--entropy_loss_weight', default=0.0, type=float, help="Entropy loss on target, default is 0")
     parser.add_argument('--use_deco', action="store_true", help="If true use deco architecture")
     parser.add_argument('--train_deco_weight', action="store_true")
     parser.add_argument('--deco_blocks', default=4, type=int)
@@ -43,8 +44,10 @@ def get_args():
 
 
 def get_name(args, seed):
-    name = "lr:%g_BS:%d_epochs:%d_DannW:%g_IS:%d" % (args.lr, args.batch_size, args.epochs,
-                                                     args.DANN_weight, args.image_size)
+    name = "lr:%g_BS:%d_epochs:%d_IS:%d_DannW:%g" % (args.lr, args.batch_size, args.epochs,
+                                                     args.image_size, args.DANN_weight)
+    if args.entropy_loss_weight > 0.0:
+        name += "_entropy:%g" % args.entropy_loss_weight
     if args.use_deco:
         name += "_deco%d_%d_%s_%dc" % (
             args.deco_blocks, args.deco_kernels, args.deco_block_type, args.deco_output_channels)
@@ -68,7 +71,6 @@ def to_grid(x):
     s = x.shape[2]
     y = x.swapaxes(1, 3).reshape(3, s * 3, s, channels).swapaxes(1, 2).reshape(s * 3, s * 3, channels).squeeze()[
         np.newaxis, ...]
-    print(y.shape)
     return y
 
 
@@ -90,6 +92,8 @@ batch_size = args.batch_size
 image_size = args.image_size
 n_epoch = args.epochs
 dann_weight = args.DANN_weight
+entropy_weight = args.entropy_loss_weight
+
 source_dataset_name = args.source
 target_dataset_name = args.target
 
@@ -169,8 +173,8 @@ for epoch in range(n_epoch):
 
         target_class_output, domain_output = my_net(input_data=Variable(t_img), lambda_val=lambda_val)
         err_t_domain = loss_domain(domain_output, Variable(target_domain_label))
-        err = dann_weight * err_t_domain + dann_weight * err_s_domain + err_s_label
         entropy_target = entropy_loss(target_class_output)
+        err = dann_weight * err_t_domain + dann_weight * err_s_domain + err_s_label + entropy_weight + entropy_target
         err.backward()
         optimizer.step()
 
@@ -189,8 +193,8 @@ for epoch in range(n_epoch):
         if (batch_idx % (len_dataloader / 2 + 1)) == 0:
             logger.scalar_summary("loss/source", err_s_label, absolute_iter_count)
             logger.scalar_summary("loss/domain", (err_s_domain + err_t_domain) / 2, absolute_iter_count)
-            logger.scalar_summary("loss/entropy_source", entropy_source, absolute_iter_count)
-            logger.scalar_summary("loss/entropy_domain", (entropy_target + err_t_domain) / 2, absolute_iter_count)
+            # logger.scalar_summary("loss/entropy_source", entropy_source, absolute_iter_count)
+            logger.scalar_summary("loss/entropy_target", entropy_target, absolute_iter_count)
             print('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \
                   % (epoch, batch_idx, len_dataloader, err_s_label.cpu().data.numpy(),
                      err_s_domain.cpu().data.numpy(), err_t_domain.cpu().data.numpy()))
