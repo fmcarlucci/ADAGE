@@ -22,9 +22,10 @@ class ReverseLayerF(Function):
 
 
 class Combo(nn.Module):
-    def __init__(self, deco_weight=0.001, n_deco=4, deco_block=BasicBlock, classifier=None, train_deco_weight=False):
+    def __init__(self, deco_weight=0.001, n_deco=4, deco_block=BasicBlock, classifier=None, train_deco_weight=False,
+                 deco_kernels=64, out_channels=3):
         super(Combo, self).__init__()
-        self.deco = Deco(deco_block, [n_deco], deco_weight, train_deco_weight)
+        self.deco = Deco(deco_block, [n_deco], deco_weight, train_deco_weight, deco_kernels, output_channels=out_channels)
         self.net = get_classifier(classifier)
 
     def forward(self, input_data, lambda_val):
@@ -33,18 +34,18 @@ class Combo(nn.Module):
 
 
 class Deco(nn.Module):
-    def __init__(self, block, layers, deco_weight, train_deco_weight):
-        self.inplanes = 64
+    def __init__(self, block, layers, deco_weight, train_deco_weight, inplanes=64, output_channels=3):
+        self.inplanes = inplanes
         self.ratio = 1
         super(Deco, self).__init__()
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=5, stride=1, padding=2,
+        self.conv1 = nn.Conv2d(3, inplanes, kernel_size=5, stride=1, padding=2,
                                bias=False)
-        self.bn1 = nn.BatchNorm2d(64)
+        self.bn1 = nn.BatchNorm2d(inplanes)
         self.relu = nn.ReLU(inplace=True)
         # self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, 64, layers[0])
+        self.layer1 = self._make_layer(block, inplanes, layers[0])
+        self.conv3D = nn.Conv2d(inplanes, output_channels, 1)
         #        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
-        self.conv3D = nn.Conv2d(64, 3, 1)
         # self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         # self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
 

@@ -5,6 +5,7 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data
 from torch.autograd import Variable
+from torchvision.models.resnet import BasicBlock, Bottleneck
 
 from dataset import data_loader
 from dataset.data_loader import get_dataset
@@ -14,6 +15,8 @@ from models.model import CNNModel, Combo, classifier_list, get_classifier
 import numpy as np
 from test import test
 import time
+
+deco_types = {'basic': BasicBlock, 'bottleneck': Bottleneck}
 
 
 def get_args():
@@ -26,6 +29,10 @@ def get_args():
     parser.add_argument('--use_deco', action="store_true", help="If true use deco architecture")
     parser.add_argument('--train_deco_weight', action="store_true")
     parser.add_argument('--deco_blocks', default=4, type=int)
+    parser.add_argument('--deco_kernels', default=64, type=int)
+    parser.add_argument('--deco_block', default='basic', choices=deco_types.keys(),
+                        help="Which kind of deco block to use")
+    parser.add_argument('--deco_output_channels', type=int, default=3, help="3 or 1")
     parser.add_argument('--suffix', help="Will be added to end of name", default="")
     parser.add_argument('--source', default="mnist", choices=data_loader.dataset_list)
     parser.add_argument('--target', default="mnist_m", choices=data_loader.dataset_list)
@@ -38,7 +45,7 @@ def get_name(args, seed):
     name = "lr:%g_BS:%d_epochs:%d_DannW:%g_IS:%d" % (args.lr, args.batch_size, args.epochs,
                                                      args.DANN_weight, args.image_size)
     if args.use_deco:
-        name += "_deco%d" % args.deco_blocks
+        name += "_deco%d_%d_%s_%dc" % (args.deco_blocks, args.deco_kernels, args.deco_block, args.deco_output_channels)
     if args.train_deco_weight:
         name += "_trainWeight"
     if args.classifier:
@@ -102,7 +109,8 @@ dataloader_target = torch.utils.data.DataLoader(
 # load model
 
 if args.use_deco:
-    my_net = Combo(n_deco=args.deco_blocks, classifier=args.classifier, train_deco_weight=args.train_deco_weight)
+    my_net = Combo(n_deco=args.deco_blocks, classifier=args.classifier, train_deco_weight=args.train_deco_weight,
+                   deco_kernels=args.deco_kernels, deco_block=deco_types[args.deco_block], out_channels=args.deco_output_channels)
 else:
     my_net = get_classifier(args.classifier)
 
