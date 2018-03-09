@@ -174,7 +174,7 @@ for epoch in range(n_epoch):
         target_class_output, domain_output = my_net(input_data=Variable(t_img), lambda_val=lambda_val)
         err_t_domain = loss_domain(domain_output, Variable(target_domain_label))
         entropy_target = entropy_loss(target_class_output)
-        err = dann_weight * err_t_domain + dann_weight * err_s_domain + err_s_label + entropy_weight + entropy_target
+        err = dann_weight * err_t_domain + dann_weight * err_s_domain + err_s_label + entropy_weight * entropy_target
         err.backward()
         optimizer.step()
 
