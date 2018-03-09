@@ -32,6 +32,7 @@ def get_args():
     parser.add_argument('--deco_kernels', default=64, type=int)
     parser.add_argument('--deco_block_type', default='basic', choices=deco_types.keys(),
                         help="Which kind of deco block to use")
+    parser.add_argument('--deco_bn', action="store_true", help="If set, deco output will be normalized")
     parser.add_argument('--deco_output_channels', type=int, default=3, help="3 or 1")
     parser.add_argument('--suffix', help="Will be added to end of name", default="")
     parser.add_argument('--source', default="mnist", choices=data_loader.dataset_list)
@@ -45,7 +46,10 @@ def get_name(args, seed):
     name = "lr:%g_BS:%d_epochs:%d_DannW:%g_IS:%d" % (args.lr, args.batch_size, args.epochs,
                                                      args.DANN_weight, args.image_size)
     if args.use_deco:
-        name += "_deco%d_%d_%s_%dc" % (args.deco_blocks, args.deco_kernels, args.deco_block_type, args.deco_output_channels)
+        name += "_deco%d_%d_%s_%dc" % (
+            args.deco_blocks, args.deco_kernels, args.deco_block_type, args.deco_output_channels)
+        if args.deco_bn:
+            name += "_bn"
     if args.train_deco_weight:
         name += "_trainWeight"
     if args.classifier:
@@ -110,7 +114,8 @@ dataloader_target = torch.utils.data.DataLoader(
 
 if args.use_deco:
     my_net = Combo(n_deco=args.deco_blocks, classifier=args.classifier, train_deco_weight=args.train_deco_weight,
-                   deco_kernels=args.deco_kernels, deco_block=deco_types[args.deco_block_type], out_channels=args.deco_output_channels)
+                   deco_bn=args.deco_bn, deco_kernels=args.deco_kernels, deco_block=deco_types[args.deco_block_type],
+                   out_channels=args.deco_output_channels)
 else:
     my_net = get_classifier(args.classifier)
 
@@ -180,7 +185,7 @@ for epoch in range(n_epoch):
             logger.image_summary("images/source", to_grid(to_np(source_images)), absolute_iter_count)
             logger.image_summary("images/target", to_grid(to_np(target_images)), absolute_iter_count)
 
-        if (batch_idx % (len_dataloader/2 + 1)) == 0:
+        if (batch_idx % (len_dataloader / 2 + 1)) == 0:
             logger.scalar_summary("loss/source", err_s_label, absolute_iter_count)
             logger.scalar_summary("loss/domain", (err_s_domain + err_t_domain) / 2, absolute_iter_count)
             print('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \

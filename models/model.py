@@ -23,9 +23,9 @@ class ReverseLayerF(Function):
 
 class Combo(nn.Module):
     def __init__(self, deco_weight=0.001, n_deco=4, deco_block=BasicBlock, classifier=None, train_deco_weight=False,
-                 deco_kernels=64, out_channels=3):
+                 deco_kernels=64, out_channels=3, deco_bn=False):
         super(Combo, self).__init__()
-        self.deco = Deco(deco_block, [n_deco], deco_weight, train_deco_weight, deco_kernels, output_channels=out_channels)
+        self.deco = Deco(deco_block, [n_deco], deco_weight, train_deco_weight, deco_kernels, output_channels=out_channels, deco_bn=deco_bn)
         self.net = get_classifier(classifier)
 
     def forward(self, input_data, lambda_val):
@@ -34,7 +34,7 @@ class Combo(nn.Module):
 
 
 class Deco(nn.Module):
-    def __init__(self, block, layers, deco_weight, train_deco_weight, inplanes=64, output_channels=3):
+    def __init__(self, block, layers, deco_weight, train_deco_weight, inplanes=64, output_channels=3, deco_bn=False):
         self.inplanes = inplanes
         self.ratio = 1
         super(Deco, self).__init__()
@@ -45,6 +45,10 @@ class Deco(nn.Module):
         # self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, inplanes, layers[0])
         self.conv3D = nn.Conv2d(inplanes, output_channels, 1)
+        if deco_bn:
+            self.final_bn = nn.BatchNorm2d(3)
+        else:
+            self.final_bn = None
         #        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         # self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         # self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
@@ -92,7 +96,10 @@ class Deco(nn.Module):
         # x = nn.functional.upsample(x, scale_factor=2, mode='bilinear')
         x = self.deco_weight * x
         self.ratio = input_data.norm() / x.norm()
-        return input_data + x  # , x.norm() / input_data.shape[0]
+        x = input_data + x
+        if self.final_bn:
+            x = self.final_bn(x)
+        return x
 
 
 class BasicDANN(nn.Module):
