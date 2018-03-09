@@ -22,7 +22,7 @@ class ReverseLayerF(Function):
 
 
 def entropy_loss(x):
-    return torch.sum(-F.softmax(x, 1) * F.log_softmax(x, 1)).mean()
+    return torch.sum(-F.softmax(x, 1) * F.log_softmax(x, 1), 1).mean()
 
 
 class Combo(nn.Module):
