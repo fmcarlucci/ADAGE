@@ -143,8 +143,7 @@ class MnistModel(BasicDANN):
             nn.ReLU(True),
             nn.Linear(100, 100),
             nn.ReLU(True),
-            nn.Linear(100, 10),
-            nn.LogSoftmax(1)
+            nn.Linear(100, 10)
         )
 
 
@@ -182,8 +181,7 @@ class SVHNModel(BasicDANN):
             nn.Linear(3072, 2048),
             nn.Dropout(0.5, True),
             nn.ReLU(True),
-            nn.Linear(2048, 10),
-            nn.LogSoftmax(1)
+            nn.Linear(2048, 10)
         )
 
 
@@ -216,7 +214,7 @@ class CNNModel(nn.Module):
         self.class_classifier.add_module('c_bn2', nn.BatchNorm2d(100))
         self.class_classifier.add_module('c_relu2', nn.ReLU(True))
         self.class_classifier.add_module('c_fc3', nn.Linear(100, 10))
-        self.class_classifier.add_module('c_softmax', nn.LogSoftmax(1))
+        # self.class_classifier.add_module('c_softmax', nn.LogSoftmax(1))
 
         self.domain_classifier = nn.Sequential()
         self.domain_classifier.add_module('d_fc1', nn.Linear(50 * 4 * 4, 100))

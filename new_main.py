@@ -122,7 +122,7 @@ else:
 # setup optimizer
 optimizer = optim.Adam(my_net.parameters(), lr=lr)
 
-loss_class = torch.nn.NLLLoss()
+loss_class = torch.nn.CrossEntropyLoss()
 loss_domain = torch.nn.NLLLoss()
 
 if cuda:
