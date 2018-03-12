@@ -16,11 +16,14 @@ import numpy as np
 from test import test
 import time
 
+from train.optim import get_optimizer_and_scheduler, optimizer_list, Optimizers
+
 deco_types = {'basic': BasicBlock, 'bottleneck': Bottleneck}
 
 
 def get_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--optimizer', choices=optimizer_list, default=Optimizers.adam.value)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--image_size', type=int, default=28)
     parser.add_argument('--batch_size', default=128, type=int)
@@ -44,8 +47,8 @@ def get_args():
 
 
 def get_name(args, seed):
-    name = "lr:%g_BS:%d_epochs:%d_IS:%d_DannW:%g" % (args.lr, args.batch_size, args.epochs,
-                                                     args.image_size, args.DANN_weight)
+    name = "%s_lr:%g_BS:%d_epochs:%d_IS:%d_DannW:%g" % (args.optimizer, args.lr, args.batch_size, args.epochs,
+                                                        args.image_size, args.DANN_weight)
     if args.entropy_loss_weight > 0.0:
         name += "_entropy:%g" % args.entropy_loss_weight
     if args.use_deco:
@@ -75,6 +78,7 @@ def to_grid(x):
 
 
 args = get_args()
+print(args)
 manual_seed = random.randint(1, 1000)
 run_name = get_name(args, manual_seed)
 print("Working on " + run_name)
@@ -124,7 +128,8 @@ else:
     my_net = get_classifier(args.classifier)
 
 # setup optimizer
-optimizer = optim.Adam(my_net.parameters(), lr=lr)
+optimizer, scheduler = get_optimizer_and_scheduler(args.optimizer, my_net, args.epochs,
+                                                   args.lr)  # optim.Adam(my_net.parameters(), lr=lr)
 
 loss_class = torch.nn.CrossEntropyLoss()
 loss_domain = torch.nn.NLLLoss()
@@ -139,6 +144,8 @@ for p in my_net.parameters():
 
 # training
 for epoch in range(n_epoch):
+    if scheduler:
+        scheduler.step()
     # this must be done each epoch, or zip will exhaust
     if len(dataloader_source) > len(dataloader_target):
         len_dataloader = len(dataloader_source)
@@ -189,6 +196,8 @@ for epoch in range(n_epoch):
                 target_images = Variable(t_img[:9])
             logger.image_summary("images/source", to_grid(to_np(source_images)), absolute_iter_count)
             logger.image_summary("images/target", to_grid(to_np(target_images)), absolute_iter_count)
+            if scheduler:
+                logger.scalar_summary("aux/lr", scheduler.get_lr()[0], absolute_iter_count)
 
         if (batch_idx % (len_dataloader / 2 + 1)) == 0:
             logger.scalar_summary("loss/source", err_s_label, absolute_iter_count)
