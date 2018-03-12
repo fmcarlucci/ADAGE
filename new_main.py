@@ -1,22 +1,20 @@
 import argparse
-import random
 import itertools
+import random
+
+import numpy as np
 import torch.backends.cudnn as cudnn
-import torch.optim as optim
 import torch.utils.data
 from torch.autograd import Variable
 from torchvision.models.resnet import BasicBlock, Bottleneck
 
 from dataset import data_loader
-from dataset.data_loader import get_dataset
-
+from dataset.data_loader import get_dataloader
 from logger import Logger
-from models.model import CNNModel, Combo, classifier_list, get_classifier, entropy_loss
-import numpy as np
+from models.model import Combo, classifier_list, get_classifier, entropy_loss
 from test import test
-import time
-
 from train.optim import get_optimizer_and_scheduler, optimizer_list, Optimizers
+from train.utils import get_name, to_np, to_grid
 
 deco_types = {'basic': BasicBlock, 'bottleneck': Bottleneck}
 
@@ -46,39 +44,6 @@ def get_args():
     return parser.parse_args()
 
 
-def get_name(args, seed):
-    name = "%s_lr:%g_BS:%d_epochs:%d_IS:%d_DannW:%g" % (args.optimizer, args.lr, args.batch_size, args.epochs,
-                                                        args.image_size, args.DANN_weight)
-    if args.entropy_loss_weight > 0.0:
-        name += "_entropy:%g" % args.entropy_loss_weight
-    if args.use_deco:
-        name += "_deco%d_%d_%s_%dc" % (
-            args.deco_blocks, args.deco_kernels, args.deco_block_type, args.deco_output_channels)
-        if args.deco_bn:
-            name += "_bn"
-    else:
-        name += "_vanilla"
-    if args.train_deco_weight:
-        name += "_trainWeight"
-    if args.classifier:
-        name += "_" + args.classifier
-    if args.suffix:
-        name += "_" + args.suffix
-    return name + "_%d" % (seed)
-
-
-def to_np(x):
-    return x.data.cpu().numpy()
-
-
-def to_grid(x):
-    channels = x.shape[1]
-    s = x.shape[2]
-    y = x.swapaxes(1, 3).reshape(3, s * 3, s, channels).swapaxes(1, 2).reshape(s * 3, s * 3, channels).squeeze()[
-        np.newaxis, ...]
-    return y
-
-
 args = get_args()
 print(args)
 manual_seed = random.randint(1, 1000)
@@ -106,19 +71,8 @@ target_dataset_name = args.target
 random.seed(manual_seed)
 torch.manual_seed(manual_seed)
 
-dataloader_source = torch.utils.data.DataLoader(
-    dataset=get_dataset(args.source, image_size),
-    batch_size=batch_size,
-    shuffle=True,
-    drop_last=True,
-    num_workers=4)
-
-dataloader_target = torch.utils.data.DataLoader(
-    dataset=get_dataset(args.target, image_size),
-    batch_size=batch_size,
-    shuffle=True,
-    drop_last=True,
-    num_workers=4)
+dataloader_source = get_dataloader(args.source, batch_size, image_size)
+dataloader_target = get_dataloader(args.target, batch_size, image_size)
 
 # load model
 
@@ -130,11 +84,10 @@ else:
     my_net = get_classifier(args.classifier)
 
 # setup optimizer
-optimizer, scheduler = get_optimizer_and_scheduler(args.optimizer, my_net, args.epochs,
-                                                   args.lr)  # optim.Adam(my_net.parameters(), lr=lr)
+optimizer, scheduler = get_optimizer_and_scheduler(args.optimizer, my_net, args.epochs, args.lr)
 
 loss_class = torch.nn.CrossEntropyLoss()
-loss_domain = torch.nn.NLLLoss()
+loss_domain = torch.nn.CrossEntropyLoss()
 
 if cuda:
     my_net = my_net.cuda()

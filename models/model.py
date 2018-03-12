@@ -140,8 +140,7 @@ class MnistModel(BasicDANN):
         self.domain_classifier = nn.Sequential(
             nn.Linear(48 * 4 * 4, 100),
             nn.ReLU(True),
-            nn.Linear(100, 2),
-            nn.LogSoftmax(1)
+            nn.Linear(100, 2)
         )
         self.class_classifier = nn.Sequential(
             nn.Linear(48 * 4 * 4, 100),
@@ -176,8 +175,7 @@ class SVHNModel(BasicDANN):
             nn.Linear(1024, 1024),
             nn.Dropout(0.5, True),
             nn.ReLU(True),
-            nn.Linear(1024, 2),
-            nn.LogSoftmax(1)
+            nn.Linear(1024, 2)
         )
         self.class_classifier = nn.Sequential(
             nn.Linear(128 * 8 * 8, 3072),
@@ -226,7 +224,6 @@ class CNNModel(nn.Module):
         self.domain_classifier.add_module('d_bn1', nn.BatchNorm2d(100))
         self.domain_classifier.add_module('d_relu1', nn.ReLU(True))
         self.domain_classifier.add_module('d_fc2', nn.Linear(100, 2))
-        self.domain_classifier.add_module('d_softmax', nn.LogSoftmax(1))
 
     def forward(self, input_data, lambda_val):
         input_data = input_data.expand(input_data.data.shape[0], 3, 28, 28)

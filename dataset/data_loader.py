@@ -1,3 +1,4 @@
+import torch.utils
 import torch.utils.data as data
 from PIL import Image
 import os
@@ -12,6 +13,7 @@ mnist_m_image_root = os.path.join('dataset', 'mnist_m')
 
 dataset_list = [mnist, mnist_m, svhn]
 dataset_cache = {}
+
 
 def get_dataset(name, image_size, mode="train"):
     if mode is "train":
@@ -83,3 +85,12 @@ class GetLoader(data.Dataset):
 
     def __len__(self):
         return self.n_data
+
+
+def get_dataloader(dataset_name, batch_size, image_size):
+    return torch.utils.data.DataLoader(
+        dataset=get_dataset(dataset_name, image_size),
+        batch_size=batch_size,
+        shuffle=True,
+        drop_last=True,
+        num_workers=4)
