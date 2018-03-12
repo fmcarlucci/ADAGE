@@ -48,7 +48,7 @@ class Deco(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         # self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, inplanes, layers[0])
-        self.conv3D = nn.Conv2d(inplanes, output_channels, 1)
+        self.conv_out = nn.Conv2d(inplanes * block.expansion, output_channels, 1)
         if deco_bn:
             self.final_bn = nn.BatchNorm2d(3)
         else:
@@ -69,6 +69,7 @@ class Deco(nn.Module):
         else:
             self.deco_weight = Variable(torch.FloatTensor(1)).cuda()
         self.deco_weight.data.fill_(deco_weight)
+        print(self)
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
@@ -95,7 +96,7 @@ class Deco(nn.Module):
         # x = self.maxpool(x)
 
         x = self.layer1(x)
-        x = self.conv3D(x)
+        x = self.conv_out(x)
         #        x = self.layer2(x)
         # x = nn.functional.upsample(x, scale_factor=2, mode='bilinear')
         x = self.deco_weight * x
