@@ -56,6 +56,8 @@ def get_name(args, seed):
             args.deco_blocks, args.deco_kernels, args.deco_block_type, args.deco_output_channels)
         if args.deco_bn:
             name += "_bn"
+    else:
+        name += "_vanilla"
     if args.train_deco_weight:
         name += "_trainWeight"
     if args.classifier:
