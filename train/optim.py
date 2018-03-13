@@ -23,7 +23,7 @@ optimizer_list = [v.value for v in Optimizers]
 
 def get_optimizer_and_scheduler(optim_name, net, max_epochs, lr):
     if optim_name == Optimizers.adam.value:
-        optim.Adam(net.parameters(), lr=lr)
+        optimizer = optim.Adam(net.parameters(), lr=lr)
         step_down_ratio = 0.8
     elif optim_name == Optimizers.sgd.value:
         optimizer = optim.SGD(net.parameters(), lr=lr, momentum=MOMENTUM, weight_decay=WEIGHT_DECAY, nesterov=NESTEROV)
