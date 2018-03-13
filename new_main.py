@@ -71,7 +71,7 @@ dataloader_source = get_dataloader(args.source, batch_size, image_size)
 dataloader_target = get_dataloader(args.target, batch_size, image_size)
 
 # load model
-my_net = get_net()
+my_net = get_net(args)
 
 # setup optimizer
 optimizer, scheduler = get_optimizer_and_scheduler(args.optimizer, my_net, args.epochs, args.lr)
