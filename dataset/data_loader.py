@@ -12,7 +12,6 @@ mnist_image_root = os.path.join('dataset', 'mnist')
 mnist_m_image_root = os.path.join('dataset', 'mnist_m')
 
 dataset_list = [mnist, mnist_m, svhn]
-dataset_cache = {}
 
 
 def get_dataset(name, image_size, mode="train"):
@@ -29,11 +28,7 @@ def get_dataset(name, image_size, mode="train"):
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         ])
-
-    dataset = dataset_cache.get((name, mode))
-    if dataset is None:
-        dataset = load_dataset(img_transform, name)
-        dataset_cache[(name, mode)] = dataset
+    dataset = load_dataset(img_transform, name)
     return dataset
 
 
