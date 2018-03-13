@@ -29,7 +29,7 @@ def get_args():
     parser.add_argument('--DANN_weight', default=1.0, type=float)
     parser.add_argument('--entropy_loss_weight', default=0.0, type=float, help="Entropy loss on target, default is 0")
     parser.add_argument('--use_deco', action="store_true", help="If true use deco architecture")
-    parser.add_argument('--train_deco_weight', action="store_true")
+    parser.add_argument('--train_deco_weight', action="store_true", help="Train the deco weight")
     parser.add_argument('--deco_blocks', default=4, type=int)
     parser.add_argument('--deco_kernels', default=64, type=int)
     parser.add_argument('--deco_block_type', default='basic', choices=deco_types.keys(),
@@ -37,8 +37,8 @@ def get_args():
     parser.add_argument('--deco_bn', action="store_true", help="If set, deco output will be normalized")
     parser.add_argument('--deco_output_channels', type=int, default=3, help="3 or 1")
     parser.add_argument('--suffix', help="Will be added to end of name", default="")
-    parser.add_argument('--source', default="mnist", choices=data_loader.dataset_list)
-    parser.add_argument('--target', default="mnist_m", choices=data_loader.dataset_list)
+    parser.add_argument('--sources', default=[data_loader.mnist], choices=data_loader.dataset_list)
+    parser.add_argument('--target', default=data_loader.mnist_m, choices=data_loader.dataset_list)
     parser.add_argument('--classifier', default=None, choices=classifier_list.keys())
     parser.add_argument('--tmp_log', action="store_true", help="If set, logger will save to /tmp instead")
     return parser.parse_args()
@@ -97,6 +97,7 @@ if cuda:
 for p in my_net.parameters():
     p.requires_grad = True
 
+exit()
 # training
 for epoch in range(n_epoch):
     if scheduler:

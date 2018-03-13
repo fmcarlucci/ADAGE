@@ -32,26 +32,32 @@ def get_dataset(name, image_size, mode="train"):
 
     dataset = dataset_cache.get((name, mode))
     if dataset is None:
-        if name == mnist:
-            dataset = datasets.MNIST(
-                root=mnist_image_root,
-                train=True,
-                transform=img_transform, download=True
-            )
-        elif name == svhn:
-            dataset = datasets.SVHN(
-                root=os.path.join('dataset', 'svhn'),
-                transform=img_transform, download=True
-            )
-        elif name == mnist_m:
-            train_list = os.path.join(mnist_m_image_root, 'mnist_m_train_labels.txt')
-
-            dataset = GetLoader(
-                data_root=os.path.join(mnist_m_image_root, 'mnist_m_train'),
-                data_list=train_list,
-                transform=img_transform
-            )
+        dataset = load_dataset(img_transform, name)
         dataset_cache[(name, mode)] = dataset
+    return dataset
+
+
+def load_dataset(img_transform, dataset_name):
+    if dataset_name == mnist:
+        dataset = datasets.MNIST(
+            root=mnist_image_root,
+            train=True,
+            transform=img_transform, download=True
+        )
+    elif dataset_name == svhn:
+        dataset = datasets.SVHN(
+            root=os.path.join('dataset', 'svhn'),
+            transform=img_transform, download=True
+        )
+    elif dataset_name == mnist_m:
+        train_list = os.path.join(mnist_m_image_root, 'mnist_m_train_labels.txt')
+        dataset = GetLoader(
+            data_root=os.path.join(mnist_m_image_root, 'mnist_m_train'),
+            data_list=train_list,
+            transform=img_transform
+        )
+    elif type(dataset_name) is list:
+        dataset = ConcatDataset([load_dataset(img_transform, dset) for dset in dataset_name])
     return dataset
 
 
@@ -94,3 +100,14 @@ def get_dataloader(dataset_name, batch_size, image_size):
         shuffle=True,
         drop_last=True,
         num_workers=4)
+
+
+class ConcatDataset(torch.utils.data.Dataset):
+    def __init__(self, *datasets):
+        self.datasets = datasets
+
+    def __getitem__(self, i):
+        return tuple(d[i] for d in self.datasets)
+
+    def __len__(self):
+        return min(len(d) for d in self.datasets)
