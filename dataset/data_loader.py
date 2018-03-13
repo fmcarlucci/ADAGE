@@ -98,7 +98,7 @@ def get_dataloader(dataset_name, batch_size, image_size):
 
 
 class ConcatDataset(torch.utils.data.Dataset):
-    def __init__(self, *datasets):
+    def __init__(self, datasets):
         self.datasets = datasets
 
     def __getitem__(self, i):
