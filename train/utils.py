@@ -32,3 +32,7 @@ def to_grid(x):
     y = x.swapaxes(1, 3).reshape(3, s * 3, s, channels).swapaxes(1, 2).reshape(s * 3, s * 3, channels).squeeze()[
         np.newaxis, ...]
     return y
+
+
+def get_folder_name(source, target):
+    return '-'.join(source) + "_" + target

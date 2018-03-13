@@ -7,6 +7,9 @@ from torch.nn import Parameter
 from torchvision.models.resnet import BasicBlock
 import torch.nn.functional as F
 
+from new_main import args, deco_types
+
+
 class ReverseLayerF(Function):
     @staticmethod
     def forward(ctx, x, lambda_val):
@@ -29,7 +32,8 @@ class Combo(nn.Module):
     def __init__(self, deco_weight=0.001, n_deco=4, deco_block=BasicBlock, classifier=None, train_deco_weight=False,
                  deco_kernels=64, out_channels=3, deco_bn=False):
         super(Combo, self).__init__()
-        self.deco = Deco(deco_block, [n_deco], deco_weight, train_deco_weight, deco_kernels, output_channels=out_channels, deco_bn=deco_bn)
+        self.deco = Deco(deco_block, [n_deco], deco_weight, train_deco_weight, deco_kernels,
+                         output_channels=out_channels, deco_bn=deco_bn)
         self.net = get_classifier(classifier)
 
     def forward(self, input_data, lambda_val):
@@ -239,3 +243,17 @@ class CNNModel(nn.Module):
 classifier_list = {"roided_lenet": CNNModel,
                    "mnist": MnistModel,
                    "svhn": SVHNModel}
+
+
+def get_net(args):
+    if args.use_deco:
+        my_net = Combo(n_deco=args.deco_blocks, classifier=args.classifier, train_deco_weight=args.train_deco_weight,
+                       deco_bn=args.deco_bn, deco_kernels=args.deco_kernels,
+                       deco_block=deco_types[args.deco_block_type],
+                       out_channels=args.deco_output_channels)
+    else:
+        my_net = get_classifier(args.classifier)
+
+    for p in my_net.parameters():
+        p.requires_grad = True
+    return my_net
