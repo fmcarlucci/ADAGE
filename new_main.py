@@ -5,17 +5,14 @@ import numpy as np
 import torch.backends.cudnn as cudnn
 import torch.utils.data
 from torch.autograd import Variable
-from torchvision.models.resnet import BasicBlock, Bottleneck
 
 from dataset import data_loader
 from dataset.data_loader import get_dataloader
 from logger import Logger
-from models.model import classifier_list, entropy_loss, get_net
+from models.model import classifier_list, entropy_loss, get_net, deco_types
 from test import test
 from train.optim import get_optimizer_and_scheduler, optimizer_list, Optimizers
 from train.utils import get_name, to_np, to_grid, get_folder_name
-
-deco_types = {'basic': BasicBlock, 'bottleneck': Bottleneck}
 
 
 def get_args():

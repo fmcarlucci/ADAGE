@@ -4,10 +4,8 @@ import torch
 import torch.nn as nn
 from torch.autograd import Function, Variable
 from torch.nn import Parameter
-from torchvision.models.resnet import BasicBlock
+from torchvision.models.resnet import BasicBlock, Bottleneck
 import torch.nn.functional as F
-
-from new_main import args, deco_types
 
 
 class ReverseLayerF(Function):
@@ -257,3 +255,6 @@ def get_net(args):
     for p in my_net.parameters():
         p.requires_grad = True
     return my_net
+
+
+deco_types = {'basic': BasicBlock, 'bottleneck': Bottleneck}
