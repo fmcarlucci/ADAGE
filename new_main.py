@@ -102,6 +102,9 @@ for epoch in range(n_epoch):
         # process source datasets
         source_class_loss = Variable(torch.zeros(1), requires_grad=True)
         source_domain_loss = Variable(torch.zeros(1), requires_grad=True)
+        if cuda:
+            source_class_loss = source_class_loss.cuda()
+            source_domain_loss = source_domain_loss.cuda()
         for v, source_data in enumerate(data_source_batch):
             source_domain_label = torch.ones(batch_size).long() * (v+1)
             s_img, s_label = source_data
