@@ -9,7 +9,7 @@ GAMMA = 0.1
 base_step_down_ratio = 0.4
 
 NESTEROV = True
-WEIGHT_DECAY = 1e-4
+WEIGHT_DECAY = 0
 MOMENTUM = 0.9
 
 
@@ -27,7 +27,7 @@ def get_optimizer_and_scheduler(optim_name, net, max_epochs, lr):
         step_down_ratio = 0.8
     elif optim_name == Optimizers.sgd.value:
         optimizer = optim.SGD(net.parameters(), lr=lr, momentum=MOMENTUM, weight_decay=WEIGHT_DECAY, nesterov=NESTEROV)
-        step_down_ratio = 0.4
+        step_down_ratio = base_step_down_ratio
     return optimizer, get_scheduler(optimizer, max_epochs, step_down_ratio)
 
 
