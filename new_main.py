@@ -155,6 +155,7 @@ for epoch in range(n_epoch):
             print('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \
                   % (epoch, batch_idx, len_dataloader, err_s_label.cpu().data.numpy(),
                      err_s_domain.cpu().data.numpy(), err_t_domain.cpu().data.numpy()))
+        batch_idx += 1
 
     my_net.train(False)
     for source in source_dataset_names:

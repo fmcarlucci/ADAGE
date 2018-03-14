@@ -28,11 +28,11 @@ def entropy_loss(x):
 
 class Combo(nn.Module):
     def __init__(self, deco_weight=0.001, n_deco=4, deco_block=BasicBlock, classifier=None, train_deco_weight=False,
-                 deco_kernels=64, out_channels=3, deco_bn=False):
+                 deco_kernels=64, out_channels=3, deco_bn=False, domain_classes=2):
         super(Combo, self).__init__()
         self.deco = Deco(deco_block, [n_deco], deco_weight, train_deco_weight, deco_kernels,
                          output_channels=out_channels, deco_bn=deco_bn)
-        self.net = get_classifier(classifier)
+        self.net = get_classifier(classifier, domain_classes)
 
     def forward(self, input_data, lambda_val):
         input_data = self.deco(input_data)
@@ -128,7 +128,7 @@ class BasicDANN(nn.Module):
 
 
 class MnistModel(BasicDANN):
-    def __init__(self):
+    def __init__(self, domain_classes):
         super(MnistModel, self).__init__()
         print("Using LeNet")
         self.features = nn.Sequential(
@@ -142,7 +142,7 @@ class MnistModel(BasicDANN):
         self.domain_classifier = nn.Sequential(
             nn.Linear(48 * 4 * 4, 100),
             nn.ReLU(True),
-            nn.Linear(100, 2)
+            nn.Linear(100, domain_classes)
         )
         self.class_classifier = nn.Sequential(
             nn.Linear(48 * 4 * 4, 100),
@@ -154,7 +154,7 @@ class MnistModel(BasicDANN):
 
 
 class SVHNModel(BasicDANN):
-    def __init__(self):
+    def __init__(self, domain_classes):
         super(SVHNModel, self).__init__()
         print("Using SVHN")
         self.features = nn.Sequential(
@@ -177,7 +177,7 @@ class SVHNModel(BasicDANN):
             nn.Linear(1024, 1024),
             nn.Dropout(0.5, True),
             nn.ReLU(True),
-            nn.Linear(1024, 2)
+            nn.Linear(1024, domain_classes)
         )
         self.class_classifier = nn.Sequential(
             nn.Linear(128 * 8 * 8, 3072),
@@ -190,14 +190,14 @@ class SVHNModel(BasicDANN):
         )
 
 
-def get_classifier(name):
+def get_classifier(name, domain_classes):
     if name:
-        return classifier_list[name]()
+        return classifier_list[name](domain_classes)
     return CNNModel()
 
 
 class CNNModel(nn.Module):
-    def __init__(self):
+    def __init__(self, domain_classes):
         super(CNNModel, self).__init__()
         self.feature = nn.Sequential()
         self.feature.add_module('f_conv1', nn.Conv2d(3, 64, kernel_size=5))
@@ -225,7 +225,7 @@ class CNNModel(nn.Module):
         self.domain_classifier.add_module('d_fc1', nn.Linear(50 * 4 * 4, 100))
         self.domain_classifier.add_module('d_bn1', nn.BatchNorm2d(100))
         self.domain_classifier.add_module('d_relu1', nn.ReLU(True))
-        self.domain_classifier.add_module('d_fc2', nn.Linear(100, 2))
+        self.domain_classifier.add_module('d_fc2', nn.Linear(100, domain_classes))
 
     def forward(self, input_data, lambda_val):
         input_data = input_data.expand(input_data.data.shape[0], 3, 28, 28)
@@ -248,9 +248,9 @@ def get_net(args):
         my_net = Combo(n_deco=args.deco_blocks, classifier=args.classifier, train_deco_weight=args.train_deco_weight,
                        deco_bn=args.deco_bn, deco_kernels=args.deco_kernels,
                        deco_block=deco_types[args.deco_block_type],
-                       out_channels=args.deco_output_channels)
+                       out_channels=args.deco_output_channels, domain_classes=args.domain_classes)
     else:
-        my_net = get_classifier(args.classifier)
+        my_net = get_classifier(args.classifier, domain_classes=args.domain_classes)
 
     for p in my_net.parameters():
         p.requires_grad = True
