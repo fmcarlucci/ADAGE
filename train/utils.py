@@ -3,8 +3,8 @@ import os
 
 
 def get_name(args, seed):
-    name = "%s_lr:%g_BS:%d_epochs:%d_IS:%d_DannW:%g" % (args.optimizer, args.lr, args.batch_size, args.epochs,
-                                                        args.image_size, args.DANN_weight)
+    name = "%s_lr:%g_BS:%d_epochs:%d_IS:%d_DannW:%g_DA%s" % (args.optimizer, args.lr, args.batch_size, args.epochs,
+                                                             args.image_size, args.DANN_weight, args.data_aug_mode)
     if args.entropy_loss_weight > 0.0:
         name += "_entropy:%g" % args.entropy_loss_weight
     if args.use_deco:

@@ -15,10 +15,16 @@ dataset_list = [mnist, mnist_m, svhn]
 
 
 def get_dataset(name, image_size, mode="train"):
-    if mode is "train":
+    if mode == "train":
         img_transform = transforms.Compose([
             transforms.RandomResizedCrop(image_size, scale=(0.5, 1.0)),
             transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+        ])
+    elif mode == "simple":
+        img_transform = transforms.Compose([
+            transforms.RandomResizedCrop(image_size, scale=(0.9, 1.0)),
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         ])
@@ -88,9 +94,9 @@ class GetLoader(data.Dataset):
         return self.n_data
 
 
-def get_dataloader(dataset_name, batch_size, image_size):
+def get_dataloader(dataset_name, batch_size, image_size, mode):
     return torch.utils.data.DataLoader(
-        dataset=get_dataset(dataset_name, image_size),
+        dataset=get_dataset(dataset_name, image_size, mode),
         batch_size=batch_size,
         shuffle=True,
         drop_last=True,
