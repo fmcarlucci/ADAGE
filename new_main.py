@@ -172,7 +172,7 @@ for epoch in range(n_epoch):
             source_name = ""
         else:
             source_name = source
-        logger.scalar_summary("acc/source%s" % source_name, s_acc, absolute_iter_count)
+        logger.scalar_summary("acc/source_%s" % source_name, s_acc, absolute_iter_count)
     t_acc = test(target_dataset_name, epoch, my_net, image_size)
     logger.scalar_summary("acc/target", t_acc, absolute_iter_count)
     logger.scalar_summary("aux/p", p, absolute_iter_count)
