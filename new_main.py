@@ -12,7 +12,7 @@ from logger import Logger
 from models.model import classifier_list, entropy_loss, get_net, deco_types
 from test import test
 from train.optim import get_optimizer_and_scheduler, optimizer_list, Optimizers
-from train.utils import get_name, to_np, to_grid, get_folder_name
+from train.utils import get_name, to_np, to_grid, get_folder_name, ensure_dir
 
 
 def get_args():
@@ -48,7 +48,8 @@ print("Working on " + run_name)
 log_folder = "logs/"
 if args.tmp_log:
     log_folder = "/tmp/"
-logger = Logger("{}/{}/{}".format(log_folder, get_folder_name(args.source, args.target), run_name))
+folder_name = get_folder_name(args.source, args.target)
+logger = Logger("{}/{}/{}".format(log_folder, folder_name, run_name))
 
 model_root = 'models'
 
@@ -107,7 +108,7 @@ for epoch in range(n_epoch):
             source_class_loss = source_class_loss.cuda()
             source_domain_loss = source_domain_loss.cuda()
         for v, source_data in enumerate(data_source_batch):
-            source_domain_label = torch.ones(batch_size).long() * (v+1)
+            source_domain_label = torch.ones(batch_size).long() * (v + 1)
             s_img, s_label = source_data
             if cuda:
                 s_img = s_img.cuda()
@@ -161,7 +162,7 @@ for epoch in range(n_epoch):
     my_net.train(False)
     for source in source_dataset_names:
         s_acc = test(source, epoch, my_net, image_size)
-        if len(source_dataset_names) == 0:
+        if len(source_dataset_names) == 1:
             source_name = ""
         else:
             source_name = source
@@ -171,7 +172,8 @@ for epoch in range(n_epoch):
     logger.scalar_summary("aux/p", p, absolute_iter_count)
     logger.scalar_summary("aux/lambda", lambda_val, absolute_iter_count)
 
-save_path = '{}/{}_{}/{}_{}.pth'.format(model_root, args.source, args.target, run_name, epoch)
+save_path = '{}/{}/{}_{}.pth'.format(model_root, folder_name, run_name, epoch)
 print("Network saved to {}".format(save_path))
+ensure_dir(save_path)
 torch.save(my_net, save_path)
 print('done')

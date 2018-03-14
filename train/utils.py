@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 
 def get_name(args, seed):
@@ -36,3 +37,9 @@ def to_grid(x):
 
 def get_folder_name(source, target):
     return '-'.join(source) + "_" + target
+
+
+def ensure_dir(file_path):
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
