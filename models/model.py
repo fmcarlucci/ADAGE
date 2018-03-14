@@ -193,7 +193,7 @@ class SVHNModel(BasicDANN):
 def get_classifier(name, domain_classes):
     if name:
         return classifier_list[name](domain_classes)
-    return CNNModel()
+    return CNNModel(domain_classes)
 
 
 class CNNModel(nn.Module):

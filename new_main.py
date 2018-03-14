@@ -67,6 +67,7 @@ target_dataset_name = args.target
 random.seed(manual_seed)
 torch.manual_seed(manual_seed)
 
+args.domain_classes = 1 + len(args.source)
 dataloader_source = get_dataloader(args.source, batch_size, image_size)
 dataloader_target = get_dataloader(args.target, batch_size, image_size)
 
