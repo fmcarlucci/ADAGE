@@ -102,7 +102,7 @@ class ConcatDataset(torch.utils.data.Dataset):
         self.datasets = datasets
 
     def __getitem__(self, i):
-        return tuple(d[i % len(self.datasets)] for d in self.datasets)
+        return tuple(d[i % len(d)] for d in self.datasets)
 
     def __len__(self):
         return max(len(d) for d in self.datasets)
