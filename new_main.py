@@ -32,7 +32,7 @@ def get_args():
     parser.add_argument('--entropy_loss_weight', default=0.0, type=float, help="Entropy loss on target, default is 0")
     # deco
     parser.add_argument('--use_deco', action="store_true", help="If true use deco architecture")
-    parser.add_argument('--train_deco_weight', action="store_true", help="Train the deco weight")
+    parser.add_argument('--train_deco_weight', default=True, type=bool, help="Train the deco weight (true by default)")
     parser.add_argument('--deco_blocks', default=4, type=int)
     parser.add_argument('--deco_kernels', default=64, type=int)
     parser.add_argument('--deco_block_type', default='basic', choices=deco_types.keys(),
