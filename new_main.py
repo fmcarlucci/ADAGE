@@ -27,6 +27,7 @@ def get_args():
     parser.add_argument('--data_aug_mode', default="train", choices=["train", "simple"])
     parser.add_argument('--source', default=[data_loader.mnist], choices=data_loader.dataset_list, nargs='+')
     parser.add_argument('--target', default=data_loader.mnist_m, choices=data_loader.dataset_list)
+    parser.add_argument('--n_classes', default=10, type=int)
     # losses
     parser.add_argument('--DANN_weight', default=1.0, type=float)
     parser.add_argument('--entropy_loss_weight', default=0.0, type=float, help="Entropy loss on target, default is 0")
@@ -147,6 +148,7 @@ for epoch in range(n_epoch):
                 target_images = my_net.deco(Variable(t_img[:9]))
                 logger.scalar_summary("aux/deco_to_image_ratio", my_net.deco.ratio.data.cpu()[0], absolute_iter_count)
                 logger.scalar_summary("aux/deco_weight", my_net.deco.deco_weight.data.cpu()[0], absolute_iter_count)
+                logger.scalar_summary("aux/image_weight", my_net.deco.image_weight.data.cpu()[0], absolute_iter_count)
             else:
                 source_images = Variable(s_img[:9])
                 target_images = Variable(t_img[:9])
