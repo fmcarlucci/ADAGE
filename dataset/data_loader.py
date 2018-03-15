@@ -22,6 +22,13 @@ def get_dataset(name, image_size, mode="train"):
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         ])
+    elif mode == "train":
+        img_transform = transforms.Compose([
+            transforms.RandomResizedCrop(image_size),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=2),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+        ])
     elif mode == "simple":
         img_transform = transforms.Compose([
             transforms.RandomResizedCrop(image_size, scale=(0.9, 1.0)),
@@ -57,6 +64,10 @@ def load_dataset(img_transform, dataset_name):
             data_list=train_list,
             transform=img_transform
         )
+    elif dataset_name == "amazon":
+        dataset = datasets.ImageFolder('dataset/amazon', transform=transforms)
+    elif dataset_name == "webcam":
+        dataset = datasets.ImageFolder('dataset/webcam', transform=transforms)
     elif type(dataset_name) is list:
         dataset = ConcatDataset([load_dataset(img_transform, dset) for dset in dataset_name])
     return dataset

@@ -2,6 +2,7 @@ import argparse
 import random
 
 import numpy as np
+import time
 import torch.backends.cudnn as cudnn
 import torch.utils.data
 from torch.autograd import Variable
@@ -93,6 +94,7 @@ if cuda:
     loss_class = loss_class.cuda()
     loss_domain = loss_domain.cuda()
 
+start = time.time()
 # training
 for epoch in range(n_epoch):
     if scheduler:
@@ -184,4 +186,4 @@ save_path = '{}/{}/{}_{}.pth'.format(model_root, folder_name, run_name, epoch)
 print("Network saved to {}".format(save_path))
 ensure_dir(save_path)
 torch.save(my_net, save_path)
-print('done')
+print('done, it took %g' % (time.time() - start))

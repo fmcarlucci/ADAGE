@@ -5,6 +5,7 @@ import torch.nn as nn
 from torch.autograd import Function, Variable
 from torch.nn import Parameter
 from torchvision.models.resnet import BasicBlock, Bottleneck
+from torchvision.models.alexnet import alexnet
 import torch.nn.functional as F
 
 
@@ -56,10 +57,10 @@ class Combo(nn.Module):
         self.net = get_classifier(classifier, domain_classes, n_classes)
         if isinstance(self.net, AlexNet):
             self.deco = DECO(deco_block, [n_deco], deco_weight, train_deco_weight, deco_kernels,
-                              output_channels=out_channels, deco_bn=deco_bn)
+                             output_channels=out_channels, deco_bn=deco_bn)
         else:
             self.deco = DECO_mini(deco_block, [n_deco], deco_weight, train_deco_weight, deco_kernels,
-                              output_channels=out_channels, deco_bn=deco_bn)
+                                  output_channels=out_channels, deco_bn=deco_bn)
 
     def forward(self, input_data, lambda_val):
         input_data = self.deco(input_data)
@@ -328,17 +329,19 @@ class CNNModel(nn.Module):
 
 
 class AlexNet(BasicDANN):
-    def __init__(self, pretrained, domain_classes, n_classes):
+    def __init__(self, domain_classes, n_classes):
         super(AlexNet, self).__init__()
+        pretrained = alexnet()
         self._convs = pretrained.features
+        self.bottleneck = nn.Linear(4096, 256),  # bottleneck
         self._classifier = nn.Sequential(
             nn.Dropout(),
-            nn.Linear(256 * 6 * 6, 4096),  # pretrained.classifier[1]
+            pretrained.classifier[1],  # nn.Linear(256 * 6 * 6, 4096),  #
             nn.ReLU(inplace=True),
             nn.Dropout(),
-            nn.Linear(4096, 4096),  # pretrained.classifier[4]
+            pretrained.classifier[4],  # nn.Linear(4096, 4096),  #
             nn.ReLU(inplace=True),
-            nn.Linear(4096, 256),  # bottleneck
+            self.bottleneck
         )
         self.features = nn.Sequential(self._convs, self._classifier)
         self.class_classifier = nn.Linear(256, n_classes)
