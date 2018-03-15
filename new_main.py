@@ -169,10 +169,10 @@ for epoch in range(n_epoch):
     for source in source_dataset_names:
         s_acc = test(source, epoch, my_net, image_size)
         if len(source_dataset_names) == 1:
-            source_name = ""
+            source_name = "acc/source"
         else:
-            source_name = source
-        logger.scalar_summary("acc/source_%s" % source_name, s_acc, absolute_iter_count)
+            source_name = "acc/source_%s" % source
+        logger.scalar_summary(source_name, s_acc, absolute_iter_count)
     t_acc = test(target_dataset_name, epoch, my_net, image_size)
     logger.scalar_summary("acc/target", t_acc, absolute_iter_count)
     logger.scalar_summary("aux/p", p, absolute_iter_count)
