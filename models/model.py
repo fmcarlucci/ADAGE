@@ -24,8 +24,7 @@ def get_classifier(name, domain_classes, n_classes):
 def get_net(args):
     if args.use_deco:
         deco_args = DecoArgs(n_layers=args.deco_blocks, train_deco_weight=args.train_deco_weight,
-                             deco_bn=args.deco_bn, deco_kernels=args.deco_kernels,
-                             deco_block=deco_types[args.deco_block_type],
+                             deco_kernels=args.deco_kernels, deco_block=deco_types[args.deco_block_type],
                              out_channels=args.deco_output_channels)
         my_net = Combo(deco_args, classifier=args.classifier, domain_classes=args.domain_classes,
                        n_classes=args.n_classes)
@@ -75,7 +74,7 @@ class Combo(nn.Module):
 class BasicDECO(nn.Module):
     def __init__(self, deco_args):
         super(BasicDECO, self).__init__()
-        self.inplanes = deco_args.inplanes
+        self.inplanes = deco_args.deco_kernels
         self.ratio = 1.0
         if deco_args.train_deco_weight:
             self.deco_weight = Parameter(torch.FloatTensor(1), requires_grad=True)
