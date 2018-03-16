@@ -30,7 +30,7 @@ def get_dataset(name, image_size, mode="train"):
     elif mode == "office":
         img_transform = transforms.Compose([
             transforms.RandomResizedCrop(image_size),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=2),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         ])
@@ -77,9 +77,9 @@ def load_dataset(img_transform, dataset_name):
             transform=img_transform
         )
     elif dataset_name == amazon:
-        dataset = datasets.ImageFolder('dataset/amazon', transform=transforms)
+        dataset = datasets.ImageFolder('dataset/amazon', transform=img_transform)
     elif dataset_name == webcam:
-        dataset = datasets.ImageFolder('dataset/webcam', transform=transforms)
+        dataset = datasets.ImageFolder('dataset/webcam', transform=img_transform)
     elif type(dataset_name) is list:
         dataset = ConcatDataset([load_dataset(img_transform, dset) for dset in dataset_name])
     return dataset
