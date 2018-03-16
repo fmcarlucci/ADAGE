@@ -8,6 +8,8 @@ from torchvision.models.resnet import BasicBlock, Bottleneck
 from torchvision.models.alexnet import alexnet
 import torch.nn.functional as func
 
+deco_starting_weight = 0.001
+
 
 class DecoArgs:
     def __init__(self, args):
@@ -17,6 +19,7 @@ class DecoArgs:
         self.deco_kernels = args.deco_kernels
         self.deco_block = deco_types[args.deco_block_type],
         self.out_channels = args.deco_output_channels
+        self.deco_weight = deco_starting_weight
 
 
 def get_classifier(name, domain_classes, n_classes):
