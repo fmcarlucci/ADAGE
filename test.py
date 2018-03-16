@@ -3,12 +3,12 @@ import torch.backends.cudnn as cudnn
 import torch.utils.data
 from torch.autograd import Variable
 from torchvision import transforms
-from dataset.data_loader import GetLoader, get_dataset
+from dataset.data_loader import GetLoader, get_dataset, dataset_list
 from torchvision import datasets
 
 
 def test(dataset_name, epoch, my_net, image_size):
-    assert dataset_name in ['mnist', 'mnist_m', 'svhn']
+    assert dataset_name in dataset_list
     cuda = True
     cudnn.benchmark = True
     batch_size = 128

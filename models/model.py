@@ -303,7 +303,7 @@ class AlexNet(BasicDANN):
         super(AlexNet, self).__init__()
         pretrained = alexnet()
         self._convs = pretrained.features
-        self.bottleneck = nn.Linear(4096, 256),  # bottleneck
+        self.bottleneck = nn.Linear(4096, 256)  # bottleneck
         self._classifier = nn.Sequential(
             nn.Dropout(),
             pretrained.classifier[1],  # nn.Linear(256 * 6 * 6, 4096),  #
