@@ -6,7 +6,13 @@ from torch.autograd import Function, Variable
 from torch.nn import Parameter
 from torchvision.models.resnet import BasicBlock, Bottleneck
 from torchvision.models.alexnet import alexnet
-import torch.nn.functional as F
+import torch.nn.functional as func
+
+
+class DecoArgs:
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 
 def get_classifier(name, domain_classes, n_classes):
@@ -17,10 +23,12 @@ def get_classifier(name, domain_classes, n_classes):
 
 def get_net(args):
     if args.use_deco:
-        my_net = Combo(n_deco=args.deco_blocks, classifier=args.classifier, train_deco_weight=args.train_deco_weight,
-                       deco_bn=args.deco_bn, deco_kernels=args.deco_kernels,
-                       deco_block=deco_types[args.deco_block_type],
-                       out_channels=args.deco_output_channels, domain_classes=args.domain_classes)
+        deco_args = DecoArgs(n_layers=args.deco_blocks, train_deco_weight=args.train_deco_weight,
+                             deco_bn=args.deco_bn, deco_kernels=args.deco_kernels,
+                             deco_block=deco_types[args.deco_block_type],
+                             out_channels=args.deco_output_channels)
+        my_net = Combo(deco_args, classifier=args.classifier, domain_classes=args.domain_classes,
+                       n_classes=args.n_classes)
     else:
         my_net = get_classifier(args.classifier, domain_classes=args.domain_classes, n_classes=args.n_classes)
 
@@ -30,7 +38,7 @@ def get_net(args):
 
 
 def entropy_loss(x):
-    return torch.sum(-F.softmax(x, 1) * F.log_softmax(x, 1), 1).mean()
+    return torch.sum(-func.softmax(x, 1) * func.log_softmax(x, 1), 1).mean()
 
 
 deco_types = {'basic': BasicBlock, 'bottleneck': Bottleneck}
@@ -51,16 +59,13 @@ class ReverseLayerF(Function):
 
 
 class Combo(nn.Module):
-    def __init__(self, deco_weight=0.001, n_deco=4, deco_block=BasicBlock, classifier=None, train_deco_weight=False,
-                 deco_kernels=64, out_channels=3, deco_bn=False, domain_classes=2, n_classes=10):
+    def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
         super(Combo, self).__init__()
         self.net = get_classifier(classifier, domain_classes, n_classes)
         if isinstance(self.net, AlexNet):
-            self.deco = DECO(deco_block, [n_deco], deco_weight, train_deco_weight, deco_kernels,
-                             output_channels=out_channels, deco_bn=deco_bn)
+            self.deco = DECO(deco_args)
         else:
-            self.deco = DECO_mini(deco_block, [n_deco], deco_weight, train_deco_weight, deco_kernels,
-                                  output_channels=out_channels, deco_bn=deco_bn)
+            self.deco = DECO_mini(deco_args)
 
     def forward(self, input_data, lambda_val):
         input_data = self.deco(input_data)
@@ -68,19 +73,19 @@ class Combo(nn.Module):
 
 
 class BasicDECO(nn.Module):
-    def __init__(self, inplanes, deco_weight, train_deco_weight, train_image_weight):
+    def __init__(self, deco_args):
         super(BasicDECO, self).__init__()
-        self.inplanes = inplanes
+        self.inplanes = deco_args.inplanes
         self.ratio = 1.0
-        if train_deco_weight:
+        if deco_args.train_deco_weight:
             self.deco_weight = Parameter(torch.FloatTensor(1), requires_grad=True)
         else:
             self.deco_weight = Variable(torch.FloatTensor(1)).cuda()
-        if train_image_weight:
+        if deco_args.train_image_weight:
             self.image_weight = Parameter(torch.FloatTensor(1), requires_grad=True)
         else:
             self.image_weight = Variable(torch.FloatTensor(1)).cuda()
-        self.deco_weight.data.fill_(deco_weight)
+        self.deco_weight.data.fill_(deco_args.deco_weight)
         self.image_weight.data.fill_(1.0)
 
     def init_weights(self):
@@ -107,8 +112,7 @@ class BasicDECO(nn.Module):
                 nn.BatchNorm2d(planes * block.expansion),
             )
 
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample))
+        layers = [block(self.inplanes, planes, stride, downsample)]
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
             layers.append(block(self.inplanes, planes))
@@ -117,16 +121,14 @@ class BasicDECO(nn.Module):
 
 
 class DECO_mini(BasicDECO):
-    def __init__(self, block, layers, deco_weight, train_deco_weight, inplanes=64, output_channels=3,
-                 train_image_weight=False):
-        super(DECO_mini, self).__init__(inplanes=inplanes, deco_weight=deco_weight, train_deco_weight=train_deco_weight,
-                                        train_image_weight=train_image_weight)
-        self.conv1 = nn.Conv2d(3, inplanes, kernel_size=5, stride=1, padding=2,
+    def __init__(self, deco_args):
+        super(DECO_mini, self).__init__(deco_args)
+        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=5, stride=1, padding=2,
                                bias=False)
-        self.bn1 = nn.BatchNorm2d(inplanes)
+        self.bn1 = nn.BatchNorm2d(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
-        self.layer1 = self._make_layer(block, inplanes, layers[0])
-        self.conv_out = nn.Conv2d(inplanes * block.expansion, output_channels, 1)
+        self.layer1 = self._make_layer(deco_args.block, self.inplanes, deco_args.n_layers)
+        self.conv_out = nn.Conv2d(self.inplanes * deco_args.block.expansion, deco_args.output_channels, 1)
         self.init_weights()
         print(self)
 
@@ -143,17 +145,15 @@ class DECO_mini(BasicDECO):
 
 
 class DECO(BasicDECO):
-    def __init__(self, block, layers, deco_weight, train_deco_weight, inplanes=64, output_channels=3,
-                 train_image_weight=False):
-        super(DECO, self).__init__(inplanes=inplanes, deco_weight=deco_weight, train_deco_weight=train_deco_weight,
-                                   train_image_weight=train_image_weight)
-        self.conv1 = nn.Conv2d(3, inplanes, kernel_size=5, stride=2, padding=2,
+    def __init__(self, deco_args):
+        super(DECO, self).__init__(deco_args)
+        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=5, stride=2, padding=2,
                                bias=False)
-        self.bn1 = nn.BatchNorm2d(inplanes)
+        self.bn1 = nn.BatchNorm2d(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, inplanes, layers[0])
-        self.conv_out = nn.Conv2d(inplanes * block.expansion, output_channels, 1)
+        self.layer1 = self._make_layer(deco_args.block, self.inplanes, deco_args.n_layers)
+        self.conv_out = nn.Conv2d(self.inplanes * deco_args.block.expansion, deco_args.output_channels, 1)
         self.init_weights()
         print(self)
 
