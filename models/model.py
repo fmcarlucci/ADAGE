@@ -298,6 +298,10 @@ class CNNModel(nn.Module):
         return class_output, domain_output
 
 
+class Flatten(nn.Module):
+    def forward(self, x):
+        return x.view(x.size(0), -1)
+
 class AlexNet(BasicDANN):
     def __init__(self, domain_classes, n_classes):
         super(AlexNet, self).__init__()
@@ -305,6 +309,7 @@ class AlexNet(BasicDANN):
         self._convs = pretrained.features
         self.bottleneck = nn.Linear(4096, 256)  # bottleneck
         self._classifier = nn.Sequential(
+            Flatten(),
             nn.Dropout(),
             pretrained.classifier[1],  # nn.Linear(256 * 6 * 6, 4096),  #
             nn.ReLU(inplace=True),
