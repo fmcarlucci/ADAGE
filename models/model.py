@@ -67,26 +67,23 @@ class Combo(nn.Module):
         return self.net(input_data, lambda_val)
 
 
-class DECO_mini(nn.Module):
-    def __init__(self, block, layers, deco_weight, train_deco_weight, inplanes=64, output_channels=3, deco_bn=False):
+class BasicDECO(nn.Module):
+    def __init__(self, inplanes, deco_weight, train_deco_weight, train_image_weight):
+        super(BasicDECO, self).__init__()
         self.inplanes = inplanes
-        self.ratio = 1
-        super(DECO_mini, self).__init__()
-        self.conv1 = nn.Conv2d(3, inplanes, kernel_size=5, stride=1, padding=2,
-                               bias=False)
-        self.bn1 = nn.BatchNorm2d(inplanes)
-        self.relu = nn.ReLU(inplace=True)
-        # self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, inplanes, layers[0])
-        self.conv_out = nn.Conv2d(inplanes * block.expansion, output_channels, 1)
-        if deco_bn:
-            self.final_bn = nn.BatchNorm2d(3)
+        self.ratio = 1.0
+        if train_deco_weight:
+            self.deco_weight = Parameter(torch.FloatTensor(1), requires_grad=True)
         else:
-            self.final_bn = None
-        # self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
-        # self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
-        # self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
+            self.deco_weight = Variable(torch.FloatTensor(1)).cuda()
+        if train_image_weight:
+            self.image_weight = Parameter(torch.FloatTensor(1), requires_grad=True)
+        else:
+            self.image_weight = Variable(torch.FloatTensor(1)).cuda()
+        self.deco_weight.data.fill_(deco_weight)
+        self.image_weight.data.fill_(1.0)
 
+    def init_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
@@ -94,15 +91,12 @@ class DECO_mini(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
-        if train_deco_weight:
-            self.deco_weight = Parameter(torch.FloatTensor(1), requires_grad=True)
-            self.image_weight = Parameter(torch.FloatTensor(1), requires_grad=True)
-        else:
-            self.deco_weight = Variable(torch.FloatTensor(1)).cuda()
-            self.image_weight = Variable(torch.FloatTensor(1)).cuda()
-        self.deco_weight.data.fill_(deco_weight)
-        self.image_weight.data.fill_(1.0)
-        print(self)
+
+    def weighted_sum(self, input_data, x):
+        x = self.deco_weight * x
+        input_data = self.image_weight * input_data
+        self.ratio = input_data.norm() / x.norm()
+        return x + input_data
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
@@ -121,31 +115,38 @@ class DECO_mini(nn.Module):
 
         return nn.Sequential(*layers)
 
+
+class DECO_mini(BasicDECO):
+    def __init__(self, block, layers, deco_weight, train_deco_weight, inplanes=64, output_channels=3,
+                 train_image_weight=False):
+        super(DECO_mini, self).__init__(inplanes=inplanes, deco_weight=deco_weight, train_deco_weight=train_deco_weight,
+                                        train_image_weight=train_image_weight)
+        self.conv1 = nn.Conv2d(3, inplanes, kernel_size=5, stride=1, padding=2,
+                               bias=False)
+        self.bn1 = nn.BatchNorm2d(inplanes)
+        self.relu = nn.ReLU(inplace=True)
+        self.layer1 = self._make_layer(block, inplanes, layers[0])
+        self.conv_out = nn.Conv2d(inplanes * block.expansion, output_channels, 1)
+        self.init_weights()
+        print(self)
+
     def forward(self, input_data):
         input_data = input_data.expand(input_data.data.shape[0], 3, input_data.data.shape[2], input_data.data.shape[3])
         x = self.conv1(input_data)
         x = self.bn1(x)
         x = self.relu(x)
-        # x = self.maxpool(x)
 
         x = self.layer1(x)
         x = self.conv_out(x)
-        #        x = self.layer2(x)
-        # x = nn.functional.upsample(x, scale_factor=2, mode='bilinear')
-        x = self.deco_weight * x
-        input_data = input_data * self.image_weight
-        self.ratio = input_data.norm() / x.norm()
-        x = input_data + x
-        if self.final_bn:
-            x = self.final_bn(x)
-        return x
+
+        return self.weighted_sum(input_data, x)
 
 
-class DECO(nn.Module):
-    def __init__(self, block, layers, deco_weight, train_deco_weight, inplanes=64, output_channels=3, deco_bn=False):
-        self.inplanes = inplanes
-        self.ratio = 1
-        super(DECO, self).__init__()
+class DECO(BasicDECO):
+    def __init__(self, block, layers, deco_weight, train_deco_weight, inplanes=64, output_channels=3,
+                 train_image_weight=False):
+        super(DECO, self).__init__(inplanes=inplanes, deco_weight=deco_weight, train_deco_weight=train_deco_weight,
+                                   train_image_weight=train_image_weight)
         self.conv1 = nn.Conv2d(3, inplanes, kernel_size=5, stride=2, padding=2,
                                bias=False)
         self.bn1 = nn.BatchNorm2d(inplanes)
@@ -153,40 +154,8 @@ class DECO(nn.Module):
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, inplanes, layers[0])
         self.conv_out = nn.Conv2d(inplanes * block.expansion, output_channels, 1)
-
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-        if train_deco_weight:
-            self.deco_weight = Parameter(torch.FloatTensor(1), requires_grad=True)
-            self.image_weight = Parameter(torch.FloatTensor(1), requires_grad=True)
-        else:
-            self.deco_weight = Variable(torch.FloatTensor(1)).cuda()
-            self.image_weight = Variable(torch.FloatTensor(1)).cuda()
-        self.deco_weight.data.fill_(deco_weight)
-        self.image_weight.data.fill_(1.0)
+        self.init_weights()
         print(self)
-
-    def _make_layer(self, block, planes, blocks, stride=1):
-        downsample = None
-        if stride != 1 or self.inplanes != planes * block.expansion:
-            downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes, planes * block.expansion,
-                          kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(planes * block.expansion),
-            )
-
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample))
-        self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes))
-
-        return nn.Sequential(*layers)
 
     def forward(self, input_data):
         input_data = input_data.expand(input_data.data.shape[0], 3, input_data.data.shape[2], input_data.data.shape[3])
@@ -198,11 +167,8 @@ class DECO(nn.Module):
         x = self.layer1(x)
         x = self.conv_out(x)
         x = nn.functional.upsample(x, scale_factor=4, mode='bilinear')
-        x = self.deco_weight * x
-        input_data = input_data * self.image_weight
-        self.ratio = input_data.norm() / x.norm()
-        x = input_data + x
-        return x
+
+        return self.weighted_sum(input_data, x)
 
 
 class BasicDANN(nn.Module):
