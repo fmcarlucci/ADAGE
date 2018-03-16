@@ -305,7 +305,7 @@ class Flatten(nn.Module):
 class AlexNet(BasicDANN):
     def __init__(self, domain_classes, n_classes):
         super(AlexNet, self).__init__()
-        pretrained = alexnet()
+        pretrained = alexnet(pretrained=True)
         self._convs = pretrained.features
         self.bottleneck = nn.Linear(4096, 256)  # bottleneck
         self._classifier = nn.Sequential(
