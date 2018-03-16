@@ -10,12 +10,11 @@ def get_name(args, seed):
     if args.use_deco:
         name += "_deco%d_%d_%s_%dc" % (
             args.deco_blocks, args.deco_kernels, args.deco_block_type, args.deco_output_channels)
-        if args.deco_bn:
-            name += "_bn"
+        if args.train_deco_weight or args.train_image_weight:
+            name += "_train%s%sWeight" % (
+            "Deco" if args.train_deco_weight else "", "Image" if args.train_image_weight else "")
     else:
         name += "_vanilla"
-    if args.train_deco_weight:
-        name += "_trainWeight"
     if args.classifier:
         name += "_" + args.classifier
     if args.suffix:
