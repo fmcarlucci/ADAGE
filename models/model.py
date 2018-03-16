@@ -17,7 +17,7 @@ class DecoArgs:
         self.train_deco_weight = args.train_deco_weight
         self.train_image_weight = args.train_image_weight
         self.deco_kernels = args.deco_kernels
-        self.deco_block = deco_types[args.deco_block_type],
+        self.block = deco_types[args.deco_block_type],
         self.out_channels = args.deco_output_channels
         self.deco_weight = deco_starting_weight
 
