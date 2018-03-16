@@ -40,7 +40,6 @@ def get_args():
     parser.add_argument('--deco_kernels', default=64, type=int)
     parser.add_argument('--deco_block_type', default='basic', choices=deco_types.keys(),
                         help="Which kind of deco block to use")
-    # parser.add_argument('--deco_bn', action="store_true", help="If set, deco output will be normalized")
     parser.add_argument('--deco_output_channels', type=int, default=3, help="3 or 1")
     # misc
     parser.add_argument('--suffix', help="Will be added to end of name", default="")

@@ -10,9 +10,13 @@ import torch.nn.functional as func
 
 
 class DecoArgs:
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+    def __init__(self, args):
+        self.n_layers = args.deco_blocks
+        self.train_deco_weight = args.train_deco_weight
+        self.train_image_weight = args.train_image_weight
+        self.deco_kernels = args.deco_kernels
+        self.deco_block = deco_types[args.deco_block_type],
+        self.out_channels = args.deco_output_channels
 
 
 def get_classifier(name, domain_classes, n_classes):
@@ -23,9 +27,7 @@ def get_classifier(name, domain_classes, n_classes):
 
 def get_net(args):
     if args.use_deco:
-        deco_args = DecoArgs(n_layers=args.deco_blocks, train_deco_weight=args.train_deco_weight,
-                             deco_kernels=args.deco_kernels, deco_block=deco_types[args.deco_block_type],
-                             out_channels=args.deco_output_channels)
+        deco_args = DecoArgs(args)
         my_net = Combo(deco_args, classifier=args.classifier, domain_classes=args.domain_classes,
                        n_classes=args.n_classes)
     else:
