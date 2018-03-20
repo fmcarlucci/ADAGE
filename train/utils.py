@@ -19,7 +19,7 @@ def get_name(args, seed):
         name += "_deco%d_%d_%s_%dc" % (
             args.deco_blocks, args.deco_kernels, args.deco_block_type, args.deco_output_channels)
         if args.deco_no_residual:
-            name += "no_residual"
+            name += "_no_residual"
         elif args.train_deco_weight or args.train_image_weight:
             name += "_train%s%sWeight" % (
                 "Deco" if args.train_deco_weight else "", "Image" if args.train_image_weight else "")

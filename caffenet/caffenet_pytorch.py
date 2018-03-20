@@ -1,170 +1,41 @@
-
 import torch
 import torch.nn as nn
-import torch.legacy.nn as lnn
 
-from functools import reduce
-from torch.autograd import Variable
+from models.model import Flatten
+from models.torch_future import LocalResponseNorm
 
-from torch.legacy.nn.Module import Module
-from torch.legacy.nn.utils import clear
-
-
-class SpatialCrossMapLRN(Module):
-
-	def __init__(self, size, alpha=1e-4, beta=0.75, k=1, gpuDevice=0):
-		super(SpatialCrossMapLRN, self).__init__()
-
-		self.size = size
-		self.alpha = alpha
-		self.beta = beta
-		self.k = k
-		self.scale = None
-		self.paddedRatio = None
-		self.accumRatio = None
-		self.gpuDevice = gpuDevice
-
-	def updateOutput(self, input):
-		assert input.dim() == 4
-
-		if self.scale is None:
-			self.scale = input.new()
-		if self.output is None:
-			self.output = input.new()
-
-		batchSize = input.size(0)
-		channels = input.size(1)
-		inputHeight = input.size(2)
-		inputWidth = input.size(3)
-
-		if input.is_cuda:	
-			self.output = self.output.cuda(self.gpuDevice)
-			self.scale = self.scale.cuda(self.gpuDevice)
-
-		self.output.resize_as_(input)
-		self.scale.resize_as_(input)
-
-		# use output storage as temporary buffer
-		inputSquare = self.output
-		torch.pow(input, 2, out=inputSquare)
-
-		prePad = int((self.size - 1) / 2 + 1)
-		prePadCrop = channels if prePad > channels else prePad
-
-		scaleFirst = self.scale.select(1, 0)
-		scaleFirst.zero_()
-		# compute first feature map normalization
-		for c in range(prePadCrop):
-			scaleFirst.add_(inputSquare.select(1, c))
-
-		# reuse computations for next feature maps normalization
-		# by adding the next feature map and removing the previous
-		for c in range(1, channels):
-			scalePrevious = self.scale.select(1, c - 1)
-			scaleCurrent = self.scale.select(1, c)
-			scaleCurrent.copy_(scalePrevious)
-			if c < channels - prePad + 1:
-				squareNext = inputSquare.select(1, c + prePad - 1)
-				scaleCurrent.add_(1, squareNext)
-
-			if c > prePad:
-				squarePrevious = inputSquare.select(1, c - prePad)
-				scaleCurrent.add_(-1, squarePrevious)
-
-		self.scale.mul_(self.alpha / self.size).add_(self.k)
-
-		torch.pow(self.scale, -self.beta, out=self.output)
-		self.output.mul_(input)
-
-		return self.output
-
-	def updateGradInput(self, input, gradOutput):
-		assert input.dim() == 4
-
-		batchSize = input.size(0)
-		channels = input.size(1)
-		inputHeight = input.size(2)
-		inputWidth = input.size(3)
-
-		if self.paddedRatio is None:
-			self.paddedRatio = input.new()
-		if self.accumRatio is None:
-			self.accumRatio = input.new()
-		self.paddedRatio.resize_(channels + self.size - 1, inputHeight, inputWidth)
-		self.accumRatio.resize_(inputHeight, inputWidth)
-
-		cacheRatioValue = 2 * self.alpha * self.beta / self.size
-		inversePrePad = int(self.size - (self.size - 1) / 2)
-
-		self.gradInput.resize_as_(input)
-		torch.pow(self.scale, -self.beta, out=self.gradInput).mul_(gradOutput)
-
-		self.paddedRatio.zero_()
-		paddedRatioCenter = self.paddedRatio.narrow(0, inversePrePad, channels)
-		for n in range(batchSize):
-			torch.mul(gradOutput[n], self.output[n], out=paddedRatioCenter)
-			paddedRatioCenter.div_(self.scale[n])
-			torch.sum(self.paddedRatio.narrow(0, 0, self.size - 1), 0, out=self.accumRatio)
-			for c in range(channels):
-				self.accumRatio.add_(self.paddedRatio[c + self.size - 1])
-				self.gradInput[n][c].addcmul_(-cacheRatioValue, input[n][c], self.accumRatio)
-				self.accumRatio.add_(-1, self.paddedRatio[c])
-
-		return self.gradInput
-
-	def clearState(self):
-		clear(self, 'scale', 'paddedRatio', 'accumRatio')
-		return super(SpatialCrossMapLRN_temp, self).clearState()
-
-class LambdaBase(nn.Sequential):
-    def __init__(self, fn, *args):
-        super(LambdaBase, self).__init__(*args)
-        self.lambda_func = fn
-
-    def forward_prepare(self, input):
-        output = []
-        for module in self._modules.values():
-            output.append(module(input))
-        return output if output else input
-
-class Lambda(LambdaBase):
-    def forward(self, input):
-        return self.lambda_func(self.forward_prepare(input))
-
-class LambdaMap(LambdaBase):
-    def forward(self, input):
-        return list(map(self.lambda_func,self.forward_prepare(input)))
-
-class LambdaReduce(LambdaBase):
-    def forward(self, input):
-        return reduce(self.lambda_func,self.forward_prepare(input))
-
-
-caffenet_pytorch = nn.Sequential( # Sequential,
-	nn.Conv2d(3,96,(11, 11),(4, 4)),
-	nn.ReLU(),
-	nn.MaxPool2d((3, 3),(2, 2),(0, 0),ceil_mode=True),
-	Lambda(lambda x,lrn=SpatialCrossMapLRN(*(5, 0.0001, 0.75, 1)): Variable(lrn.forward(x.data))),
-#	Lambda(lambda x,lrn=lnn.SpatialCrossMapLRN(*(5, 0.0001, 0.75, 1)): Variable(lrn.forward(x.data))),
-	nn.Conv2d(96,256,(5, 5),(1, 1),(2, 2),1,2),
-	nn.ReLU(),
-	nn.MaxPool2d((3, 3),(2, 2),(0, 0),ceil_mode=True),
-#	Lambda(lambda x,lrn=lnn.SpatialCrossMapLRN(*(5, 0.0001, 0.75, 1)): Variable(lrn.forward(x.data))),
-	Lambda(lambda x,lrn=SpatialCrossMapLRN(*(5, 0.0001, 0.75, 1)): Variable(lrn.forward(x.data))),
-	nn.Conv2d(256,384,(3, 3),(1, 1),(1, 1)),
-	nn.ReLU(),
-	nn.Conv2d(384,384,(3, 3),(1, 1),(1, 1),1,2),
-	nn.ReLU(),
-	nn.Conv2d(384,256,(3, 3),(1, 1),(1, 1),1,2),
-	nn.ReLU(),
-	nn.MaxPool2d((3, 3),(2, 2),(0, 0),ceil_mode=True),
-	Lambda(lambda x: x.view(x.size(0),-1)), # View,
-	nn.Sequential(Lambda(lambda x: x.view(1,-1) if 1==len(x.size()) else x ),nn.Linear(9216,4096)), # Linear,
-	nn.ReLU(),
-	nn.Dropout(0.5),
-	nn.Sequential(Lambda(lambda x: x.view(1,-1) if 1==len(x.size()) else x ),nn.Linear(4096,4096)), # Linear,
-	nn.ReLU(),
-	nn.Dropout(0.5),
-	nn.Sequential(Lambda(lambda x: x.view(1,-1) if 1==len(x.size()) else x ),nn.Linear(4096,1000)), # Linear,
-	nn.Softmax(),
+caffenet_pytorch = nn.Sequential(  # Sequential,
+    nn.Conv2d(3, 96, (11, 11), (4, 4)),
+    nn.ReLU(),
+    nn.MaxPool2d((3, 3), (2, 2), (0, 0), ceil_mode=True),
+    LocalResponseNorm(5, 0.0001, 0.75),
+    nn.Conv2d(96, 256, (5, 5), (1, 1), (2, 2), 1, 2),
+    nn.ReLU(),
+    nn.MaxPool2d((3, 3), (2, 2), (0, 0), ceil_mode=True),
+    LocalResponseNorm(5, 0.0001, 0.75),
+    nn.Conv2d(256, 384, (3, 3), (1, 1), (1, 1)),
+    nn.ReLU(),
+    nn.Conv2d(384, 384, (3, 3), (1, 1), (1, 1), 1, 2),
+    nn.ReLU(),
+    nn.Conv2d(384, 256, (3, 3), (1, 1), (1, 1), 1, 2),
+    nn.ReLU(),
+    nn.MaxPool2d((3, 3), (2, 2), (0, 0), ceil_mode=True),
+    Flatten(),
+    nn.Linear(9216, 4096),  # Linear,
+    nn.ReLU(),
+    nn.Dropout(0.5),
+    nn.Linear(4096, 4096),  # Linear,
+    nn.ReLU(),
+    nn.Dropout(0.5),
+    nn.Linear(4096, 1000)  # Linear,
 )
+
+def load_pretrained(model):
+    pretrained = torch.load('caffenet/caffenet_pytorch.pth')
+    pretrained["16.weight"] = pretrained["16.1.weight"]
+    pretrained["16.bias"] = pretrained["16.1.bias"]
+    pretrained["19.weight"] = pretrained["19.1.weight"]
+    pretrained["19.bias"] = pretrained["19.1.bias"]
+    del pretrained["16.1.weight"], pretrained["16.1.bias"], pretrained["19.1.weight"], pretrained["19.1.bias"], \
+    pretrained["22.1.weight"], pretrained["22.1.bias"]
+    model.load_state_dict(pretrained)
