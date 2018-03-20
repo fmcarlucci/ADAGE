@@ -21,12 +21,16 @@ class Optimizers(Enum):
 optimizer_list = [v.value for v in Optimizers]
 
 
-def get_optimizer_and_scheduler(optim_name, net, max_epochs, lr):
+def get_optimizer_and_scheduler(optim_name, net, max_epochs, lr, keep_pretrained_fixed):
+    if keep_pretrained_fixed:
+        params = net.get_trainable_params()
+    else:
+        params = net.parameters()
     if optim_name == Optimizers.adam.value:
-        optimizer = optim.Adam(net.parameters(), lr=lr)
+        optimizer = optim.Adam(params, lr=lr)
         step_down_ratio = 0.8
     elif optim_name == Optimizers.sgd.value:
-        optimizer = optim.SGD(net.parameters(), lr=lr, momentum=MOMENTUM, weight_decay=WEIGHT_DECAY, nesterov=NESTEROV)
+        optimizer = optim.SGD(params, lr=lr, momentum=MOMENTUM, weight_decay=WEIGHT_DECAY, nesterov=NESTEROV)
         step_down_ratio = base_step_down_ratio
     return optimizer, get_scheduler(optimizer, max_epochs, step_down_ratio)
 

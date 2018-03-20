@@ -11,6 +11,8 @@ from models.model import entropy_loss, Combo
 def get_name(args, seed):
     name = "%s_lr:%g_BS:%d_epochs:%d_IS:%d_DannW:%g_DA%s" % (args.optimizer, args.lr, args.batch_size, args.epochs,
                                                              args.image_size, args.DANN_weight, args.data_aug_mode)
+    if args.keep_pretrained_fixed:
+        name += "_pretrainedFixed"
     if args.entropy_loss_weight > 0.0:
         name += "_entropy:%g" % args.entropy_loss_weight
     if args.use_deco:
@@ -50,8 +52,8 @@ def ensure_dir(file_path):
         os.makedirs(directory)
 
 
-def do_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, logger, n_epoch, cuda,
-             dann_weight, entropy_weight):
+def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, logger, n_epoch, cuda,
+                dann_weight, entropy_weight):
     model.train()
     len_dataloader = min(len(dataloader_source), len(dataloader_target))
     data_sources_iter = iter(dataloader_source)
@@ -64,17 +66,17 @@ def do_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, logg
         p = float(absolute_iter_count) / n_epoch / len_dataloader
         lambda_val = 2. / (1. + np.exp(-10 * p)) - 1
 
-        data_source_batch = data_sources_iter.next()
+        data_sources_batch = data_sources_iter.next()
         # process source datasets (can be multiple)
         err_s_label = 0.0
         err_s_domain = 0.0
-        num_source_domains = len(data_source_batch)
-        for v, source_data in enumerate(data_source_batch):
+        num_source_domains = len(data_sources_batch)
+        for v, source_data in enumerate(data_sources_batch):
             s_img, s_label = source_data
             class_loss, domain_loss = compute_batch_loss(cuda, lambda_val, model, s_img, s_label, v + 1)
             loss = class_loss + dann_weight * domain_loss
             loss.backward()
-            # save for logging only
+            # used for logging only
             err_s_label += class_loss.data.cpu().numpy()
             err_s_domain += domain_loss.data.cpu().numpy()
         err_s_label = err_s_label / num_source_domains
@@ -91,6 +93,7 @@ def do_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, logg
         optimizer.step()
         optimizer.zero_grad()
 
+        # logging stuff
         if batch_idx is 0:
             source_images = Variable(s_img[:9], volatile=True)
             target_images = Variable(t_img[:9], volatile=True)

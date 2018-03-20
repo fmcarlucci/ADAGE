@@ -75,6 +75,9 @@ class Combo(nn.Module):
         input_data = self.deco(input_data)
         return self.net(input_data, lambda_val)
 
+    def get_trainable_params(self):
+        return self.deco.parameters() + self.net.get_trainable_params()
+
 
 class BasicDECO(nn.Module):
     def __init__(self, deco_args):
@@ -192,6 +195,9 @@ class BasicDANN(nn.Module):
 
         return class_output, domain_output
 
+    def get_trainable_params(self):
+        return self.parameters()
+
 
 class MnistModel(BasicDANN):
     def __init__(self, domain_classes, n_classes):
@@ -302,6 +308,7 @@ class Flatten(nn.Module):
     def forward(self, x):
         return x.view(x.size(0), -1)
 
+
 class AlexNet(BasicDANN):
     def __init__(self, domain_classes, n_classes):
         super(AlexNet, self).__init__()
@@ -329,6 +336,9 @@ class AlexNet(BasicDANN):
             nn.ReLU(inplace=True),
             nn.Linear(1024, domain_classes),
         )
+
+    def get_trainable_params(self):
+        return self.domain_classifier.parameters() + self.class_classifier.parameters() + self.bottleneck.parameters()
 
 
 classifier_list = {"roided_lenet": CNNModel,

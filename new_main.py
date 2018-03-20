@@ -11,7 +11,7 @@ from logger import Logger
 from models.model import classifier_list, get_net, deco_types
 from test import test
 from train.optim import get_optimizer_and_scheduler, optimizer_list, Optimizers
-from train.utils import get_name, get_folder_name, ensure_dir, do_epoch
+from train.utils import get_name, get_folder_name, ensure_dir, train_epoch
 
 
 def get_args():
@@ -21,6 +21,7 @@ def get_args():
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--batch_size', default=128, type=int)
     parser.add_argument('--epochs', default=100, type=int)
+    parser.add_argument('--keep_pretrained_fixed', action="store_true")
     # data
     parser.add_argument('--image_size', type=int, default=28)
     parser.add_argument('--data_aug_mode', default="train", choices=["train", "simple", "office"])
@@ -83,7 +84,7 @@ dataloader_target = get_dataloader(args.target, batch_size, image_size, args.dat
 my_net = get_net(args)
 
 # setup optimizer
-optimizer, scheduler = get_optimizer_and_scheduler(args.optimizer, my_net, args.epochs, args.lr)
+optimizer, scheduler = get_optimizer_and_scheduler(args.optimizer, my_net, args.epochs, args.lr, args.keep_pretrained_fixed)
 
 if cuda:
     my_net = my_net.cuda()
@@ -93,8 +94,8 @@ start = time.time()
 for epoch in range(n_epoch):
     scheduler.step()
     logger.scalar_summary("aux/lr", scheduler.get_lr()[0], epoch)
-    do_epoch(epoch, dataloader_source, dataloader_target, optimizer, my_net, logger, n_epoch, cuda, dann_weight,
-             entropy_weight)
+    train_epoch(epoch, dataloader_source, dataloader_target, optimizer, my_net, logger, n_epoch, cuda, dann_weight,
+                entropy_weight)
     for source in source_dataset_names:
         s_acc = test(source, epoch, my_net, image_size)
         if len(source_dataset_names) == 1:
