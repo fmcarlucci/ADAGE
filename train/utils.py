@@ -95,8 +95,8 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
 
         # logging stuff
         if batch_idx is 0:
-            source_images = Variable(s_img[:9], volatile=True)
-            target_images = Variable(t_img[:9], volatile=True)
+            source_images = Variable(s_img[:9], volatile=True).cuda()
+            target_images = Variable(t_img[:9], volatile=True).cuda()
             if isinstance(model, Combo):
                 source_images = model.deco(source_images)
                 target_images = model.deco(target_images)

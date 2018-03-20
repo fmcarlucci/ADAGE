@@ -1,5 +1,6 @@
 import math
 
+import itertools
 import torch
 import torch.nn as nn
 from torch.autograd import Function, Variable
@@ -338,7 +339,8 @@ class AlexNet(BasicDANN):
         )
 
     def get_trainable_params(self):
-        return self.domain_classifier.parameters() + self.class_classifier.parameters() + self.bottleneck.parameters()
+        return itertools.chain(self.domain_classifier.parameters(), self.class_classifier.parameters(),
+                               self.bottleneck.parameters())
 
 
 classifier_list = {"roided_lenet": CNNModel,
