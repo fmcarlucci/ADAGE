@@ -112,6 +112,7 @@ class BasicDECO(nn.Module):
 
     def weighted_sum(self, input_data, x):
         if self.no_residual:
+            self.ratio = input_data.norm() / x.norm()
             return x
         x = self.deco_weight * x
         input_data = self.image_weight * input_data
