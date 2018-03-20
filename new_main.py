@@ -66,6 +66,9 @@ cudnn.benchmark = True
 lr = args.lr
 batch_size = args.batch_size
 image_size = args.image_size
+test_batch_size = 1024
+if image_size > 100:
+    test_batch_size = 256
 n_epoch = args.epochs
 dann_weight = args.DANN_weight
 entropy_weight = args.entropy_loss_weight
@@ -97,13 +100,13 @@ for epoch in range(n_epoch):
     train_epoch(epoch, dataloader_source, dataloader_target, optimizer, my_net, logger, n_epoch, cuda, dann_weight,
                 entropy_weight)
     for source in source_dataset_names:
-        s_acc = test(source, epoch, my_net, image_size)
+        s_acc = test(source, epoch, my_net, image_size, test_batch_size)
         if len(source_dataset_names) == 1:
             source_name = "acc/source"
         else:
             source_name = "acc/source_%s" % source
         logger.scalar_summary(source_name, s_acc, epoch)
-    t_acc = test(target_dataset_name, epoch, my_net, image_size)
+    t_acc = test(target_dataset_name, epoch, my_net, image_size, test_batch_size)
     logger.scalar_summary("acc/target", t_acc, epoch)
 
 save_path = '{}/{}/{}_{}.pth'.format(model_root, folder_name, run_name, epoch)
