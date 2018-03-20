@@ -77,7 +77,7 @@ class Combo(nn.Module):
         return self.net(input_data, lambda_val)
 
     def get_trainable_params(self):
-        return self.deco.parameters() + self.net.get_trainable_params()
+        return itertools.chain(self.deco.parameters(), self.net.get_trainable_params())
 
 
 class BasicDECO(nn.Module):
