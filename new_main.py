@@ -36,6 +36,7 @@ def get_args():
     parser.add_argument('--train_deco_weight', default=True, type=bool, help="Train the deco weight (True by default)")
     parser.add_argument('--train_image_weight', default=False, type=bool,
                         help="Train the image weight (False by default)")
+    parser.add_argument('--deco_no_residual', action="store_true", help="If set, no residual will be applied to DECO")
     parser.add_argument('--deco_blocks', default=4, type=int)
     parser.add_argument('--deco_kernels', default=64, type=int)
     parser.add_argument('--deco_block_type', default='basic', choices=deco_types.keys(),

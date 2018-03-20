@@ -21,6 +21,7 @@ class DecoArgs:
         self.block = deco_types[args.deco_block_type]
         self.output_channels = args.deco_output_channels
         self.deco_weight = deco_starting_weight
+        self.no_residual = args.deco_no_residual
 
 
 def get_classifier(name, domain_classes, n_classes):
@@ -85,6 +86,10 @@ class BasicDECO(nn.Module):
         super(BasicDECO, self).__init__()
         self.inplanes = deco_args.deco_kernels
         self.ratio = 1.0
+        self.no_residual = deco_args.no_residual
+        if self.no_residual:
+            deco_args.train_deco_weight = False
+            deco_args.train_image_weight = False
         if deco_args.train_deco_weight:
             self.deco_weight = Parameter(torch.FloatTensor(1), requires_grad=True)
         else:
@@ -106,6 +111,8 @@ class BasicDECO(nn.Module):
                 m.bias.data.zero_()
 
     def weighted_sum(self, input_data, x):
+        if self.no_residual:
+            return x
         x = self.deco_weight * x
         input_data = self.image_weight * input_data
         self.ratio = input_data.norm() / x.norm()
