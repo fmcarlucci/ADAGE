@@ -9,7 +9,7 @@ from torchvision.models.resnet import BasicBlock, Bottleneck
 from torchvision.models.alexnet import alexnet
 import torch.nn.functional as func
 
-from caffenet import caffenet_pytorch
+from models.torch_future import Flatten
 
 deco_starting_weight = 0.001
 
@@ -315,11 +315,6 @@ class CNNModel(nn.Module):
         return class_output, domain_output
 
 
-class Flatten(nn.Module):
-    def forward(self, x):
-        return x.view(x.size(0), -1)
-
-
 class AlexNet(BasicDANN):
     def __init__(self, domain_classes, n_classes):
         super(AlexNet, self).__init__()
@@ -358,7 +353,7 @@ class AlexNet(BasicDANN):
 class CaffeNet(BasicDANN):
     def __init__(self, domain_classes, n_classes):
         super(CaffeNet, self).__init__()
-        pretrained = caffenet_pytorch.load_caffenet()
+        pretrained = load_caffenet()
         self._convs = pretrained.features
         self.bottleneck = nn.Linear(4096, 256)  # bottleneck
         self._classifier = nn.Sequential(

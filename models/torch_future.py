@@ -1,5 +1,6 @@
 import torch.nn.functional as F
 import torch.nn as nn
+from torch import nn as nn
 
 
 def local_response_norm(input, size, alpha=1e-4, beta=0.75, k=1):
@@ -69,3 +70,8 @@ class LocalResponseNorm(nn.Module):
     def __repr__(self):
         return self.__class__.__name__ + '(' + str(self.size) + ', alpha=' + str(self.alpha) + ', beta=' + str(
             self.beta) + ', k=' + str(self.k) + ')'
+
+
+class Flatten(nn.Module):
+    def forward(self, x):
+        return x.view(x.size(0), -1)
