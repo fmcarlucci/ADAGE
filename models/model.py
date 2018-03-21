@@ -9,7 +9,7 @@ from torchvision.models.resnet import BasicBlock, Bottleneck
 from torchvision.models.alexnet import alexnet
 import torch.nn.functional as func
 
-from caffenet.caffenet_pytorch import load_caffenet
+from caffenet import caffenet_pytorch
 
 deco_starting_weight = 0.001
 
@@ -358,7 +358,7 @@ class AlexNet(BasicDANN):
 class CaffeNet(BasicDANN):
     def __init__(self, domain_classes, n_classes):
         super(CaffeNet, self).__init__()
-        pretrained = load_caffenet()
+        pretrained = caffenet_pytorch.load_caffenet()
         self._convs = pretrained.features
         self.bottleneck = nn.Linear(4096, 256)  # bottleneck
         self._classifier = nn.Sequential(
