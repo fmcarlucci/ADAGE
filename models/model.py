@@ -9,6 +9,7 @@ from torchvision.models.resnet import BasicBlock, Bottleneck
 from torchvision.models.alexnet import alexnet
 import torch.nn.functional as func
 
+from caffenet.caffenet_pytorch import load_caffenet
 from models.torch_future import Flatten
 
 deco_starting_weight = 0.001
@@ -70,7 +71,7 @@ class Combo(nn.Module):
     def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
         super(Combo, self).__init__()
         self.net = get_classifier(classifier, domain_classes, n_classes)
-        if isinstance(self.net, AlexNet) or isinstance(self.net, AlexNetNoBottleneck):
+        if isinstance(self.net, AlexNetStyleDANN):
             self.deco = DECO(deco_args)
         else:
             self.deco = DECO_mini(deco_args)
@@ -315,7 +316,12 @@ class CNNModel(nn.Module):
         return class_output, domain_output
 
 
-class AlexNet(BasicDANN):
+class AlexNetStyleDANN(BasicDANN):
+    def get_trainable_params(self):
+        return itertools.chain(self.domain_classifier.parameters(), self.class_classifier.parameters(),
+                               self.bottleneck.parameters())
+
+class AlexNet(AlexNetStyleDANN):
     def __init__(self, domain_classes, n_classes):
         super(AlexNet, self).__init__()
         pretrained = alexnet(pretrained=True)
@@ -344,29 +350,15 @@ class AlexNet(BasicDANN):
             nn.Linear(1024, domain_classes),
         )
 
-    def get_trainable_params(self):
-        return itertools.chain(self.domain_classifier.parameters(), self.class_classifier.parameters(),
-                               self.bottleneck.parameters())
 
 
-
-class CaffeNet(BasicDANN):
+class CaffeNet(AlexNetStyleDANN):
     def __init__(self, domain_classes, n_classes):
         super(CaffeNet, self).__init__()
         pretrained = load_caffenet()
-        self._convs = pretrained.features
+        self._convs = nn.Sequential(*list(pretrained)[:15])
         self.bottleneck = nn.Linear(4096, 256)  # bottleneck
-        self._classifier = nn.Sequential(
-            Flatten(),
-            nn.Dropout(),
-            pretrained.classifier[1],  # nn.Linear(256 * 6 * 6, 4096),  #
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            pretrained.classifier[4],  # nn.Linear(4096, 4096),  #
-            nn.ReLU(inplace=True),
-            self.bottleneck,
-            nn.ReLU(inplace=True)
-        )
+        self._classifier = nn.Sequential(*list(pretrained)[16:22], self.bottleneck, nn.ReLU(inplace=True))
         self.features = nn.Sequential(self._convs, self._classifier)
         self.class_classifier = nn.Linear(256, n_classes)
         self.domain_classifier = nn.Sequential(
@@ -379,12 +371,8 @@ class CaffeNet(BasicDANN):
             nn.Linear(1024, domain_classes),
         )
 
-    def get_trainable_params(self):
-        return itertools.chain(self.domain_classifier.parameters(), self.class_classifier.parameters(),
-                               self.bottleneck.parameters())
 
-
-class AlexNetNoBottleneck(BasicDANN):
+class AlexNetNoBottleneck(AlexNetStyleDANN):
     def __init__(self, domain_classes, n_classes):
         super(AlexNetNoBottleneck, self).__init__()
         pretrained = alexnet(pretrained=True)
@@ -418,4 +406,5 @@ classifier_list = {"roided_lenet": CNNModel,
                    "mnist": MnistModel,
                    "svhn": SVHNModel,
                    "alexnet": AlexNet,
-                   "alexnet_no_bottleneck": AlexNetNoBottleneck}
+                   "alexnet_no_bottleneck": AlexNetNoBottleneck,
+                   "caffenet": CaffeNet}
