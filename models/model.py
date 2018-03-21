@@ -68,7 +68,7 @@ class Combo(nn.Module):
     def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
         super(Combo, self).__init__()
         self.net = get_classifier(classifier, domain_classes, n_classes)
-        if isinstance(self.net, AlexNet):
+        if isinstance(self.net, AlexNet) or isinstance(self.net, AlexNetNoBottleneck):
             self.deco = DECO(deco_args)
         else:
             self.deco = DECO_mini(deco_args)
@@ -332,7 +332,8 @@ class AlexNet(BasicDANN):
             nn.Dropout(),
             pretrained.classifier[4],  # nn.Linear(4096, 4096),  #
             nn.ReLU(inplace=True),
-            self.bottleneck
+            self.bottleneck,
+            nn.ReLU(inplace=True)
         )
         self.features = nn.Sequential(self._convs, self._classifier)
         self.class_classifier = nn.Linear(256, n_classes)
@@ -351,7 +352,39 @@ class AlexNet(BasicDANN):
                                self.bottleneck.parameters())
 
 
+class AlexNetNoBottleneck(BasicDANN):
+    def __init__(self, domain_classes, n_classes):
+        super(AlexNetNoBottleneck, self).__init__()
+        pretrained = alexnet(pretrained=True)
+        self._convs = pretrained.features
+        self._classifier = nn.Sequential(
+            Flatten(),
+            nn.Dropout(),
+            pretrained.classifier[1],  # nn.Linear(256 * 6 * 6, 4096),  #
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            pretrained.classifier[4],  # nn.Linear(4096, 4096),  #
+            nn.ReLU(inplace=True),
+        )
+        self.features = nn.Sequential(self._convs, self._classifier)
+        self.class_classifier = nn.Linear(4096, n_classes)
+        self.domain_classifier = nn.Sequential(
+            nn.Dropout(),
+            nn.Linear(4096, 1024),  # pretrained.classifier[1]
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(1024, 1024),  # pretrained.classifier[4]
+            nn.ReLU(inplace=True),
+            nn.Linear(1024, domain_classes),
+        )
+
+    def get_trainable_params(self):
+        return itertools.chain(self.domain_classifier.parameters(), self.class_classifier.parameters(),
+                               self.bottleneck.parameters())
+
+
 classifier_list = {"roided_lenet": CNNModel,
                    "mnist": MnistModel,
                    "svhn": SVHNModel,
-                   "alexnet": AlexNet}
+                   "alexnet": AlexNet,
+                   "alexnet_no_bottleneck": AlexNetNoBottleneck}
