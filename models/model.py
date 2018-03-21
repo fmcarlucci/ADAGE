@@ -379,8 +379,7 @@ class AlexNetNoBottleneck(BasicDANN):
         )
 
     def get_trainable_params(self):
-        return itertools.chain(self.domain_classifier.parameters(), self.class_classifier.parameters(),
-                               self.bottleneck.parameters())
+        return itertools.chain(self.domain_classifier.parameters(), self.class_classifier.parameters())
 
 
 classifier_list = {"roided_lenet": CNNModel,
