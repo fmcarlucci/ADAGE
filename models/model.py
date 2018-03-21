@@ -356,7 +356,7 @@ class CaffeNet(AlexNetStyleDANN):
     def __init__(self, domain_classes, n_classes):
         super(CaffeNet, self).__init__()
         pretrained = load_caffenet()
-        self._convs = nn.Sequential(*list(pretrained)[:15])
+        self._convs = nn.Sequential(*list(pretrained)[:16])
         self.bottleneck = nn.Linear(4096, 256)  # bottleneck
         self._classifier = nn.Sequential(*list(pretrained)[16:22], self.bottleneck, nn.ReLU(inplace=True))
         self.features = nn.Sequential(self._convs, self._classifier)
