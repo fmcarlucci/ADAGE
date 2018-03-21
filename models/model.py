@@ -9,6 +9,8 @@ from torchvision.models.resnet import BasicBlock, Bottleneck
 from torchvision.models.alexnet import alexnet
 import torch.nn.functional as func
 
+from caffenet.caffenet_pytorch import load_caffenet
+
 deco_starting_weight = 0.001
 
 
@@ -322,6 +324,41 @@ class AlexNet(BasicDANN):
     def __init__(self, domain_classes, n_classes):
         super(AlexNet, self).__init__()
         pretrained = alexnet(pretrained=True)
+        self._convs = pretrained.features
+        self.bottleneck = nn.Linear(4096, 256)  # bottleneck
+        self._classifier = nn.Sequential(
+            Flatten(),
+            nn.Dropout(),
+            pretrained.classifier[1],  # nn.Linear(256 * 6 * 6, 4096),  #
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            pretrained.classifier[4],  # nn.Linear(4096, 4096),  #
+            nn.ReLU(inplace=True),
+            self.bottleneck,
+            nn.ReLU(inplace=True)
+        )
+        self.features = nn.Sequential(self._convs, self._classifier)
+        self.class_classifier = nn.Linear(256, n_classes)
+        self.domain_classifier = nn.Sequential(
+            nn.Dropout(),
+            nn.Linear(256, 1024),  # pretrained.classifier[1]
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(1024, 1024),  # pretrained.classifier[4]
+            nn.ReLU(inplace=True),
+            nn.Linear(1024, domain_classes),
+        )
+
+    def get_trainable_params(self):
+        return itertools.chain(self.domain_classifier.parameters(), self.class_classifier.parameters(),
+                               self.bottleneck.parameters())
+
+
+
+class CaffeNet(BasicDANN):
+    def __init__(self, domain_classes, n_classes):
+        super(CaffeNet, self).__init__()
+        pretrained = load_caffenet()
         self._convs = pretrained.features
         self.bottleneck = nn.Linear(4096, 256)  # bottleneck
         self._classifier = nn.Sequential(
