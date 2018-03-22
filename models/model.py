@@ -13,7 +13,7 @@ from caffenet.caffenet_pytorch import load_caffenet
 from models.torch_future import Flatten
 
 deco_starting_weight = 0.001
-
+deco_modes = ["shared", "separated", "source", "target"]
 
 class DecoArgs:
     def __init__(self, args):
@@ -25,6 +25,8 @@ class DecoArgs:
         self.output_channels = args.deco_output_channels
         self.deco_weight = deco_starting_weight
         self.no_residual = args.deco_no_residual
+        self.mode = args.deco_mode
+        self.use_tanh = args.deco_tanh
 
 
 def get_classifier(name, domain_classes, n_classes):
@@ -71,6 +73,7 @@ class Combo(nn.Module):
     def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
         super(Combo, self).__init__()
         self.net = get_classifier(classifier, domain_classes, n_classes)
+        self.use_tanh = deco_args.use_tanh
         if isinstance(self.net, AlexNetStyleDANN):
             self.deco = DECO(deco_args)
         else:
@@ -78,6 +81,8 @@ class Combo(nn.Module):
 
     def forward(self, input_data, lambda_val):
         input_data = self.deco(input_data)
+        if self.use_tanh:
+            input_data = torch.tanh(input_data)
         return self.net(input_data, lambda_val)
 
     def get_trainable_params(self):

@@ -1,53 +1,15 @@
-import argparse
 import random
 
 import time
 import torch.backends.cudnn as cudnn
 import torch.utils.data
 
-from dataset import data_loader
 from dataset.data_loader import get_dataloader
 from logger import Logger
-from models.model import classifier_list, get_net, deco_types
+from models.model import get_net
 from test import test
-from train.optim import get_optimizer_and_scheduler, optimizer_list, Optimizers
-from train.utils import get_name, get_folder_name, ensure_dir, train_epoch
-
-
-def get_args():
-    parser = argparse.ArgumentParser()
-    # optimizer
-    parser.add_argument('--optimizer', choices=optimizer_list, default=Optimizers.adam.value)
-    parser.add_argument('--lr', type=float, default=1e-3)
-    parser.add_argument('--batch_size', default=128, type=int)
-    parser.add_argument('--epochs', default=100, type=int)
-    parser.add_argument('--keep_pretrained_fixed', action="store_true")
-    # data
-    parser.add_argument('--image_size', type=int, default=28)
-    parser.add_argument('--data_aug_mode', default="train", choices=["train", "simple", "office"])
-    parser.add_argument('--source', default=[data_loader.mnist], choices=data_loader.dataset_list, nargs='+')
-    parser.add_argument('--target', default=data_loader.mnist_m, choices=data_loader.dataset_list)
-    parser.add_argument('--n_classes', default=10, type=int)
-    # losses
-    parser.add_argument('--DANN_weight', default=1.0, type=float)
-    parser.add_argument('--entropy_loss_weight', default=0.0, type=float, help="Entropy loss on target, default is 0")
-    # deco
-    parser.add_argument('--use_deco', action="store_true", help="If true use deco architecture")
-    parser.add_argument('--train_deco_weight', default=True, type=bool, help="Train the deco weight (True by default)")
-    parser.add_argument('--train_image_weight', default=False, type=bool,
-                        help="Train the image weight (False by default)")
-    parser.add_argument('--deco_no_residual', action="store_true", help="If set, no residual will be applied to DECO")
-    parser.add_argument('--deco_blocks', default=4, type=int)
-    parser.add_argument('--deco_kernels', default=64, type=int)
-    parser.add_argument('--deco_block_type', default='basic', choices=deco_types.keys(),
-                        help="Which kind of deco block to use")
-    parser.add_argument('--deco_output_channels', type=int, default=3, help="3 or 1")
-    # misc
-    parser.add_argument('--suffix', help="Will be added to end of name", default="")
-    parser.add_argument('--classifier', default=None, choices=classifier_list.keys())
-    parser.add_argument('--tmp_log', action="store_true", help="If set, logger will save to /tmp instead")
-    return parser.parse_args()
-
+from train.optim import get_optimizer_and_scheduler
+from train.utils import get_name, get_folder_name, ensure_dir, train_epoch, get_args
 
 args = get_args()
 print(args)

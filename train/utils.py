@@ -1,3 +1,5 @@
+import argparse
+
 import numpy as np
 import os
 
@@ -5,7 +7,9 @@ import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-from models.model import entropy_loss, Combo
+from dataset import data_loader
+from models.model import entropy_loss, Combo, deco_types, classifier_list
+from train.optim import optimizer_list, Optimizers
 
 
 def get_name(args, seed):
@@ -18,8 +22,12 @@ def get_name(args, seed):
     if args.use_deco:
         name += "_deco%d_%d_%s_%dc" % (
             args.deco_blocks, args.deco_kernels, args.deco_block_type, args.deco_output_channels)
+        if args.deco_mode != "shared":
+            name += "_" + args.deco_mode
         if args.deco_no_residual:
             name += "_no_residual"
+        if args.deco_tanh:
+            name += "_tanh"
         elif args.train_deco_weight or args.train_image_weight:
             name += "_train%s%sWeight" % (
                 "Deco" if args.train_deco_weight else "", "Image" if args.train_image_weight else "")
@@ -134,3 +142,40 @@ def compute_batch_loss(cuda, lambda_val, model, img, label, domain_label):
         class_loss = entropy_loss(class_output)
     domain_loss = F.cross_entropy(domain_output, Variable(domain_label))
     return class_loss, domain_loss
+
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    # optimizer
+    parser.add_argument('--optimizer', choices=optimizer_list, default=Optimizers.adam.value)
+    parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--batch_size', default=128, type=int)
+    parser.add_argument('--epochs', default=100, type=int)
+    parser.add_argument('--keep_pretrained_fixed', action="store_true")
+    # data
+    parser.add_argument('--image_size', type=int, default=28)
+    parser.add_argument('--data_aug_mode', default="train", choices=["train", "simple", "office"])
+    parser.add_argument('--source', default=[data_loader.mnist], choices=data_loader.dataset_list, nargs='+')
+    parser.add_argument('--target', default=data_loader.mnist_m, choices=data_loader.dataset_list)
+    parser.add_argument('--n_classes', default=10, type=int)
+    # losses
+    parser.add_argument('--DANN_weight', default=1.0, type=float)
+    parser.add_argument('--entropy_loss_weight', default=0.0, type=float, help="Entropy loss on target, default is 0")
+    # deco
+    parser.add_argument('--use_deco', action="store_true", help="If true use deco architecture")
+    parser.add_argument('--train_deco_weight', default=True, type=bool, help="Train the deco weight (True by default)")
+    parser.add_argument('--train_image_weight', default=False, type=bool,
+                        help="Train the image weight (False by default)")
+    parser.add_argument('--deco_no_residual', action="store_true", help="If set, no residual will be applied to DECO")
+    parser.add_argument('--deco_blocks', default=4, type=int)
+    parser.add_argument('--deco_kernels', default=64, type=int)
+    parser.add_argument('--deco_block_type', default='basic', choices=deco_types.keys(),
+                        help="Which kind of deco block to use")
+    parser.add_argument('--deco_output_channels', type=int, default=3, help="3 or 1")
+    parser.add_argument('--deco_mode', default="shared")
+    parser.add_argument('--deco_tanh', action="store_true", help="If set, tanh will be applied to DECO output")
+    # misc
+    parser.add_argument('--suffix', help="Will be added to end of name", default="")
+    parser.add_argument('--classifier', default=None, choices=classifier_list.keys())
+    parser.add_argument('--tmp_log', action="store_true", help="If set, logger will save to /tmp instead")
+    return parser.parse_args()
