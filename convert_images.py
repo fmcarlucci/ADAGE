@@ -1,5 +1,13 @@
 from argparse import ArgumentParser
 
+import torch
+from os import path, os
+from torch.autograd import Variable
+from torchvision.utils import save_image
+
+from dataset.data_loader import get_images_for_conversion
+
+
 def get_args():
     args = ArgumentParser()
     args.add_argument("model_path")
@@ -8,5 +16,23 @@ def get_args():
     return args
 
 
+def convert_dataset(model, input_loader, output_folder, input_prefix):
+    for i, (img, im_path) in enumerate(input_loader):
+        out = torch.tanh(model.deco(Variable(img, volatile=True).unsqueeze(0).cuda())).squeeze().data
+        outpath = path.join(output_folder, im_path[input_prefix:])
+        folder = path.dirname(outpath)
+        if not path.exists(folder):
+            os.makedirs(folder)
+        save_image(out, outpath)
+        if i % 100 == 0:
+            print("%d/%d" % (i, len(input_loader)))
+
+
 if __name__ == "__main__":
-    pass
+    args = get_args()
+    input_folder = args.input_path
+    l = len(input_folder)
+    output_folder = args.output_path
+    model_path = args.model_path
+    model = torch.load(model_path)
+    input_loader = get_images_for_conversion(input_folder)
