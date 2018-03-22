@@ -29,7 +29,7 @@ def get_dataset(name, image_size, mode="train"):
         ])
     elif mode == "office":
         img_transform = transforms.Compose([
-            transforms.RandomResizedCrop(image_size, scale=(0.5, 1.0)),
+            transforms.RandomResizedCrop(image_size, scale=(0.75, 1.0)),
             transforms.RandomHorizontalFlip(),
             transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
             transforms.ToTensor(),
