@@ -14,7 +14,7 @@ def get_args():
     args.add_argument("model_path")
     args.add_argument("input_path")
     args.add_argument("output_path")
-    return args
+    return args.parse_args()
 
 
 def convert_dataset(model, input_loader, output_folder, input_prefix):
