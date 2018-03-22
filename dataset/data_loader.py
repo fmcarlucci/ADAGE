@@ -5,6 +5,7 @@ import os
 from torchvision import datasets
 from torchvision import transforms
 import numpy as np
+from torchvision.datasets import ImageFolder
 
 mnist = 'mnist'
 mnist_m = 'mnist_m'
@@ -19,7 +20,18 @@ synth_image_root = os.path.join('dataset', 'SynthDigits')
 dataset_list = [mnist, mnist_m, svhn, synth, amazon, webcam]
 
 
+def get_images_for_conversion(folder_path, image_size=228):
+    img_transform = get_transform(image_size, "test")
+    return ImageFolderWithPath(folder_path, transform=img_transform)
+
+
 def get_dataset(name, image_size, mode="train"):
+    img_transform = get_transform(image_size, mode)
+    dataset = load_dataset(img_transform, name)
+    return dataset
+
+
+def get_transform(image_size, mode):
     if mode == "train":
         img_transform = transforms.Compose([
             transforms.RandomResizedCrop(image_size, scale=(0.5, 1.0)),
@@ -41,14 +53,13 @@ def get_dataset(name, image_size, mode="train"):
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         ])
-    else:
+    elif mode == "test":
         img_transform = transforms.Compose([
             transforms.Resize(image_size),
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         ])
-    dataset = load_dataset(img_transform, name)
-    return dataset
+    return img_transform
 
 
 def load_dataset(img_transform, dataset_name):
@@ -154,6 +165,15 @@ def get_dataloader(dataset_name, batch_size, image_size, mode):
         shuffle=True,
         drop_last=True,
         num_workers=4)
+
+
+class ImageFolderWithPath(ImageFolder):
+    def __getitem__(self, index):
+        path, _ = self.imgs[index]
+        img = self.loader(path)
+        if self.transform is not None:
+            img = self.transform(img)
+        return img, path
 
 
 class ConcatDataset(torch.utils.data.Dataset):
