@@ -1,7 +1,8 @@
+import os
 from argparse import ArgumentParser
+from os import path
 
 import torch
-from os import path, os
 from torch.autograd import Variable
 from torchvision.utils import save_image
 
