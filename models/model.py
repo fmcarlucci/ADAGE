@@ -336,7 +336,6 @@ class AlexNet(AlexNetStyleDANN):
             pretrained.classifier[4],  # nn.Linear(4096, 4096),  #
             nn.ReLU(inplace=True),
             self.bottleneck,
-            nn.ReLU(inplace=True)
         )
         self.features = nn.Sequential(self._convs, self._classifier)
         self.class_classifier = nn.Linear(256, n_classes)
@@ -358,7 +357,7 @@ class CaffeNet(AlexNetStyleDANN):
         pretrained = load_caffenet()
         self._convs = nn.Sequential(*list(pretrained)[:16])
         self.bottleneck = nn.Linear(4096, 256)  # bottleneck
-        self._classifier = nn.Sequential(*list(pretrained)[16:22], self.bottleneck, nn.ReLU(inplace=True))
+        self._classifier = nn.Sequential(*list(pretrained)[16:22], self.bottleneck)
         self.features = nn.Sequential(self._convs, self._classifier)
         self.class_classifier = nn.Linear(256, n_classes)
         self.domain_classifier = nn.Sequential(
