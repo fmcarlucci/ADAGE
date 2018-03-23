@@ -13,7 +13,7 @@ from caffenet.caffenet_pytorch import load_caffenet
 from models.torch_future import Flatten
 
 deco_starting_weight = 0.001
-deco_modes = ["shared", "separated", "source", "target"]
+
 
 class DecoArgs:
     def __init__(self, args):
@@ -38,8 +38,8 @@ def get_classifier(name, domain_classes, n_classes):
 def get_net(args):
     if args.use_deco:
         deco_args = DecoArgs(args)
-        my_net = Combo(deco_args, classifier=args.classifier, domain_classes=args.domain_classes,
-                       n_classes=args.n_classes)
+        my_net = deco_modes[deco_args.mode](deco_args, classifier=args.classifier, domain_classes=args.domain_classes,
+                                            n_classes=args.n_classes)
     else:
         my_net = get_classifier(args.classifier, domain_classes=args.domain_classes, n_classes=args.n_classes)
 
@@ -53,6 +53,12 @@ def entropy_loss(x):
 
 
 deco_types = {'basic': BasicBlock, 'bottleneck': Bottleneck}
+
+
+# Utility class for the combo network
+class PassData(nn.Module):
+    def forward(self, input_data):
+        return input_data
 
 
 class ReverseLayerF(Function):
@@ -75,9 +81,12 @@ class Combo(nn.Module):
         self.net = get_classifier(classifier, domain_classes, n_classes)
         self.use_tanh = deco_args.use_tanh
         if isinstance(self.net, AlexNetStyleDANN):
-            self.deco = DECO(deco_args)
+            self.deco_architecture = DECO
         else:
-            self.deco = DECO_mini(deco_args)
+            self.deco_architecture = DECO_mini
+
+    def set_deco_mode(self, mode):
+        self.deco = self.domain_transforms[mode]
 
     def forward(self, input_data, lambda_val):
         input_data = self.deco(input_data)
@@ -87,6 +96,63 @@ class Combo(nn.Module):
 
     def get_trainable_params(self):
         return itertools.chain(self.deco.parameters(), self.net.get_trainable_params())
+
+
+class SharedCombo(Combo):
+    def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
+        super(SharedCombo, self).__init__(deco_args, classifier, domain_classes, n_classes)
+        self._deconet = self.deco_architecture(deco_args)
+        self.domain_transforms = {"source": self._deconet,
+                                  "target": self._deconet}
+        self.deco = self.domain_transforms["source"]
+
+    def get_deco(self):
+        return self.deco
+
+
+class SourceOnlyCombo(Combo):
+    def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
+        super(SourceOnlyCombo, self).__init__(deco_args, classifier, domain_classes, n_classes)
+        self.source = self.deco_architecture(deco_args)
+        self.target = PassData()
+        self.domain_transforms = {"source": self.source,
+                                  "target": self.target}
+        self.deco = self.domain_transforms["source"]
+
+    def get_deco(self):
+        return self.source
+
+
+class TargetOnlyCombo(Combo):
+    def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
+        super(TargetOnlyCombo, self).__init__(deco_args, classifier, domain_classes, n_classes)
+        self.source = PassData()
+        self.target = self.deco_architecture(deco_args)
+        self.domain_transforms = {"source": self.source,
+                                  "target": self.target}
+        self.deco = self.domain_transforms["source"]
+
+    def get_deco(self):
+        return self.target
+
+
+class BothCombo(Combo):
+    def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
+        super(BothCombo, self).__init__(deco_args, classifier, domain_classes, n_classes)
+        self.source = self.deco_architecture(deco_args)
+        self.target = self.deco_architecture(deco_args)
+        self.domain_transforms = {"source": self.source,
+                                  "target": self.target}
+        self.deco = self.domain_transforms["source"]
+
+    def get_deco(self):
+        return self.source
+
+
+deco_modes = {"shared": SharedCombo,
+              "separated": BothCombo,
+              "source": SourceOnlyCombo,
+              "target": TargetOnlyCombo}
 
 
 class BasicDECO(nn.Module):
@@ -326,6 +392,7 @@ class AlexNetStyleDANN(BasicDANN):
         return itertools.chain(self.domain_classifier.parameters(), self.class_classifier.parameters(),
                                self.bottleneck.parameters())
 
+
 class AlexNet(AlexNetStyleDANN):
     def __init__(self, domain_classes, n_classes):
         super(AlexNet, self).__init__()
@@ -344,7 +411,7 @@ class AlexNet(AlexNetStyleDANN):
             nn.ReLU(inplace=True)
         )
         self.features = nn.Sequential(self._convs, self._classifier)
-        self.class_classifier = nn.Linear(256, n_classes)
+        self.class_classifier = nn.Sequential(nn.Dropout(), nn.Linear(256, n_classes))
         self.domain_classifier = nn.Sequential(
             nn.Dropout(),
             nn.Linear(256, 1024),  # pretrained.classifier[1]
@@ -354,7 +421,6 @@ class AlexNet(AlexNetStyleDANN):
             nn.ReLU(inplace=True),
             nn.Linear(1024, domain_classes),
         )
-
 
 
 class CaffeNet(AlexNetStyleDANN):

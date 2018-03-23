@@ -8,7 +8,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 
 from dataset import data_loader
-from models.model import entropy_loss, Combo, deco_types, classifier_list
+from models.model import entropy_loss, Combo, deco_types, classifier_list, deco_modes
 from train.optim import optimizer_list, Optimizers
 
 
@@ -81,6 +81,7 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
         err_s_label = 0.0
         err_s_domain = 0.0
         num_source_domains = len(data_sources_batch)
+        model.set_deco_mode("source")
         for v, source_data in enumerate(data_sources_batch):
             s_img, s_label = source_data
             class_loss, domain_loss = compute_batch_loss(cuda, lambda_val, model, s_img, s_label, v + 1)
@@ -93,6 +94,7 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
         err_s_domain = err_s_domain / num_source_domains
 
         # training model using target data
+        model.set_deco_mode("target")
         t_img, _ = data_target_iter.next()
         entropy_target, err_t_domain = compute_batch_loss(cuda, lambda_val, model, t_img, None, 0)
         loss = entropy_weight * entropy_target * lambda_val + dann_weight * err_t_domain
@@ -108,11 +110,13 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
             source_images = Variable(s_img[:9], volatile=True).cuda()
             target_images = Variable(t_img[:9], volatile=True).cuda()
             if isinstance(model, Combo):
+                model.set_deco_mode("source")
                 source_images = model.deco(source_images)
+                model.set_deco_mode("target")
                 target_images = model.deco(target_images)
-                logger.scalar_summary("aux/deco_to_image_ratio", model.deco.ratio.data.cpu()[0], epoch)
-                logger.scalar_summary("aux/deco_weight", model.deco.deco_weight.data.cpu()[0], epoch)
-                logger.scalar_summary("aux/image_weight", model.deco.image_weight.data.cpu()[0], epoch)
+                logger.scalar_summary("aux/deco_to_image_ratio", model.get_deco().ratio.data.cpu()[0], epoch)
+                logger.scalar_summary("aux/deco_weight", model.get_deco().deco_weight.data.cpu()[0], epoch)
+                logger.scalar_summary("aux/image_weight", model.get_deco().image_weight.data.cpu()[0], epoch)
             logger.image_summary("images/source", to_grid(to_np(source_images)), epoch)
             logger.image_summary("images/target", to_grid(to_np(target_images)), epoch)
             logger.scalar_summary("aux/p", p, epoch)
@@ -172,7 +176,7 @@ def get_args():
     parser.add_argument('--deco_block_type', default='basic', choices=deco_types.keys(),
                         help="Which kind of deco block to use")
     parser.add_argument('--deco_output_channels', type=int, default=3, help="3 or 1")
-    parser.add_argument('--deco_mode', default="shared")
+    parser.add_argument('--deco_mode', default="shared", choices=deco_modes.keys())
     parser.add_argument('--deco_tanh', action="store_true", help="If set, tanh will be applied to DECO output")
     # misc
     parser.add_argument('--suffix', help="Will be added to end of name", default="")
