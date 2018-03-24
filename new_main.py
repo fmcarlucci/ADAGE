@@ -62,6 +62,7 @@ for epoch in range(n_epoch):
     logger.scalar_summary("aux/lr", scheduler.get_lr()[0], epoch)
     train_epoch(epoch, dataloader_source, dataloader_target, optimizer, my_net, logger, n_epoch, cuda, dann_weight,
                 entropy_weight)
+    my_net.set_deco_mode("source")
     for source in source_dataset_names:
         s_acc = test(source, epoch, my_net, image_size, test_batch_size)
         if len(source_dataset_names) == 1:
@@ -69,6 +70,7 @@ for epoch in range(n_epoch):
         else:
             source_name = "acc/source_%s" % source
         logger.scalar_summary(source_name, s_acc, epoch)
+    my_net.set_deco_mode("target")
     t_acc = test(target_dataset_name, epoch, my_net, image_size, test_batch_size)
     logger.scalar_summary("acc/target", t_acc, epoch)
 
