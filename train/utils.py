@@ -9,7 +9,8 @@ import torch.nn.functional as F
 
 from dataset import data_loader
 from models.model import entropy_loss, Combo, deco_types, classifier_list, deco_modes
-from train.optim import optimizer_list, Optimizers
+from train.optim import optimizer_list, Optimizers, get_optimizer_and_scheduler
+import itertools
 
 
 def get_name(args, seed):
@@ -62,6 +63,57 @@ def ensure_dir(file_path):
         os.makedirs(directory)
 
 
+def do_pretraining(num_epochs, dataloader_source, dataloader_target, model, logger, mode="shared"):
+    optimizer, scheduler = get_optimizer_and_scheduler(Optimizers.adam.value, model, num_epochs, 0.01, True)
+    for epoch in range(num_epochs):
+        model.train()
+        if len(dataloader_source) > len(dataloader_target):
+            source_loader = dataloader_source
+            target_loader = itertools.cycle(dataloader_target)
+        else:
+            source_loader = itertools.cycle(dataloader_source)
+            target_loader = dataloader_target
+
+        for i, (source_batches, target_data) in enumerate(zip(source_loader, target_loader)):
+            scheduler.step()
+            optimizer.zero_grad()
+            source_loss = 0.0
+            import ipdb; ipdb.set_trace()
+            if mode != "target":
+                model.set_deco_mode("source")
+                for v, source_data in enumerate(source_batches):
+                    s_img, _ = source_data
+                    img_in = Variable(s_img).cuda()
+                    out = model.deco(img_in)
+                    loss = F.binary_cross_entropy(out, img_in, size_average=False)
+                    loss.backward()
+                    source_loss += loss.cpu().numpy()
+
+            # pretrain target deco only if needed
+            target_loss = 0.0
+            if mode != "source":
+                model.set_deco_mode("target")
+                target_image, _ = target_data
+                img_in = Variable(target_image).cuda()
+                out = model.deco(img_in)
+                loss = F.binary_cross_entropy(out, img_in, size_average=False)
+                loss.backward()
+                target_loss = loss.cpu().numpy()
+            optimizer.step()
+            if i == 0:
+                source_images = Variable(s_img[:9], volatile=True).cuda()
+                target_images = Variable(target_image[:9], volatile=True).cuda()
+                model.set_deco_mode("source")
+                source_images = model.deco(source_images)
+                model.set_deco_mode("target")
+                target_images = model.deco(target_images)
+                logger.image_summary("reconstruction/source", to_grid(to_np(source_images)), epoch)
+                logger.image_summary("reconstruction/target", to_grid(to_np(target_images)), epoch)
+        print("Reconstruction loss source: %g, target %g" % (source_loss, target_loss))
+        logger.scalar_summary("reconstruction/source", source_loss, epoch)
+        logger.scalar_summary("reconstruction/target", target_loss, epoch)
+
+
 def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, logger, n_epoch, cuda,
                 dann_weight, entropy_weight):
     model.train()
@@ -70,12 +122,10 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
     data_target_iter = iter(dataloader_target)
 
     batch_idx = 0
-    # import ipdb; ipdb.set_trace()
     while batch_idx < len_dataloader:
         absolute_iter_count = batch_idx + epoch * len_dataloader
         p = float(absolute_iter_count) / n_epoch / len_dataloader
         lambda_val = 2. / (1. + np.exp(-10 * p)) - 1
-
         data_sources_batch = data_sources_iter.next()
         # process source datasets (can be multiple)
         err_s_label = 0.0
@@ -130,6 +180,10 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
                   % (epoch, batch_idx, len_dataloader, err_s_label,
                      err_s_domain, err_t_domain.cpu().data.numpy()))
         batch_idx += 1
+
+
+def compute_reconstruction_loss(input_image, model):
+    loss = F.binary_cross_entropy(size_average=False)
 
 
 def compute_batch_loss(cuda, lambda_val, model, img, label, domain_label):

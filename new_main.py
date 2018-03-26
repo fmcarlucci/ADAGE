@@ -9,7 +9,7 @@ from logger import Logger
 from models.model import get_net
 from test import test
 from train.optim import get_optimizer_and_scheduler
-from train.utils import get_name, get_folder_name, ensure_dir, train_epoch, get_args
+from train.utils import get_name, get_folder_name, ensure_dir, train_epoch, get_args, do_pretraining
 
 args = get_args()
 print(args)
@@ -55,6 +55,7 @@ optimizer, scheduler = get_optimizer_and_scheduler(args.optimizer, my_net, args.
 if cuda:
     my_net = my_net.cuda()
 
+do_pretraining(10, dataloader_source, dataloader_target, my_net, logger, args.deco_mode)
 start = time.time()
 # training
 for epoch in range(n_epoch):

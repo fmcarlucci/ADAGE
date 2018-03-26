@@ -12,7 +12,7 @@ import torch.nn.functional as func
 from caffenet.caffenet_pytorch import load_caffenet
 from models.torch_future import Flatten
 
-deco_starting_weight = 0.1
+deco_starting_weight = 0.0001
 
 
 class DecoArgs:
@@ -201,6 +201,7 @@ class BasicDECO(nn.Module):
 
     def weighted_sum(self, input_data, x):
         if self.no_residual:
+            # TODO: implement tanh mode
             self.ratio = input_data.norm() / x.norm()
             return x
         x = self.deco_weight * x
