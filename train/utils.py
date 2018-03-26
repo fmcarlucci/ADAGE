@@ -6,6 +6,7 @@ import os
 import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
+import torch.nn as nn
 
 from dataset import data_loader
 from models.model import entropy_loss, Combo, deco_types, classifier_list, deco_modes
@@ -65,6 +66,7 @@ def ensure_dir(file_path):
 
 def do_pretraining(num_epochs, dataloader_source, dataloader_target, model, logger, mode="shared"):
     optimizer, scheduler = get_optimizer_and_scheduler(Optimizers.adam.value, model, num_epochs, 0.01, True)
+    loss_f = nn.BCELoss(size_average=False).cuda()
     for epoch in range(num_epochs):
         model.train()
         if len(dataloader_source) > len(dataloader_target):
@@ -85,7 +87,7 @@ def do_pretraining(num_epochs, dataloader_source, dataloader_target, model, logg
                     s_img, _ = source_data
                     img_in = Variable(s_img).cuda()
                     out = model.deco(img_in)
-                    loss = F.binary_cross_entropy(out, img_in, size_average=False)
+                    loss = loss_f((out/2.0)+0.5, (img_in/2.0)+0.5)
                     loss.backward()
                     source_loss += loss.cpu().numpy()
 
@@ -96,7 +98,7 @@ def do_pretraining(num_epochs, dataloader_source, dataloader_target, model, logg
                 target_image, _ = target_data
                 img_in = Variable(target_image).cuda()
                 out = model.deco(img_in)
-                loss = F.binary_cross_entropy(out, img_in, size_average=False)
+                loss = loss_f((out/2.0)+0.5, (img_in/2.0)+0.5)
                 loss.backward()
                 target_loss = loss.cpu().numpy()
             optimizer.step()
@@ -109,6 +111,7 @@ def do_pretraining(num_epochs, dataloader_source, dataloader_target, model, logg
                 target_images = model.deco(target_images)
                 logger.image_summary("reconstruction/source", to_grid(to_np(source_images)), epoch)
                 logger.image_summary("reconstruction/target", to_grid(to_np(target_images)), epoch)
+
         print("Reconstruction loss source: %g, target %g" % (source_loss, target_loss))
         logger.scalar_summary("reconstruction/source", source_loss, epoch)
         logger.scalar_summary("reconstruction/target", target_loss, epoch)
