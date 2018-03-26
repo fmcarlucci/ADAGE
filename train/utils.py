@@ -14,6 +14,43 @@ from train.optim import optimizer_list, Optimizers, get_optimizer_and_scheduler
 import itertools
 
 
+def get_args():
+    parser = argparse.ArgumentParser()
+    # optimizer
+    parser.add_argument('--optimizer', choices=optimizer_list, default=Optimizers.adam.value)
+    parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--batch_size', default=128, type=int)
+    parser.add_argument('--epochs', default=100, type=int)
+    parser.add_argument('--keep_pretrained_fixed', action="store_true")
+    # data
+    parser.add_argument('--image_size', type=int, default=28)
+    parser.add_argument('--data_aug_mode', default="train", choices=["train", "simple", "office"])
+    parser.add_argument('--source', default=[data_loader.mnist], choices=data_loader.dataset_list, nargs='+')
+    parser.add_argument('--target', default=data_loader.mnist_m, choices=data_loader.dataset_list)
+    parser.add_argument('--n_classes', default=10, type=int)
+    # losses
+    parser.add_argument('--DANN_weight', default=1.0, type=float)
+    parser.add_argument('--entropy_loss_weight', default=0.0, type=float, help="Entropy loss on target, default is 0")
+    # deco
+    parser.add_argument('--use_deco', action="store_true", help="If true use deco architecture")
+    parser.add_argument('--train_deco_weight', default=True, type=bool, help="Train the deco weight (True by default)")
+    parser.add_argument('--train_image_weight', default=False, type=bool,
+                        help="Train the image weight (False by default)")
+    parser.add_argument('--deco_no_residual', action="store_true", help="If set, no residual will be applied to DECO")
+    parser.add_argument('--deco_blocks', default=4, type=int)
+    parser.add_argument('--deco_kernels', default=64, type=int)
+    parser.add_argument('--deco_block_type', default='basic', choices=deco_types.keys(),
+                        help="Which kind of deco block to use")
+    parser.add_argument('--deco_output_channels', type=int, default=3, help="3 or 1")
+    parser.add_argument('--deco_mode', default="shared", choices=deco_modes.keys())
+    parser.add_argument('--deco_tanh', action="store_true", help="If set, tanh will be applied to DECO output")
+    # misc
+    parser.add_argument('--suffix', help="Will be added to end of name", default="")
+    parser.add_argument('--classifier', default=None, choices=classifier_list.keys())
+    parser.add_argument('--tmp_log', action="store_true", help="If set, logger will save to /tmp instead")
+    return parser.parse_args()
+
+
 def get_name(args, seed):
     name = "%s_lr:%g_BS:%d_epochs:%d_IS:%d_DannW:%g_DA%s" % (args.optimizer, args.lr, args.batch_size, args.epochs,
                                                              args.image_size, args.DANN_weight, args.data_aug_mode)
@@ -80,6 +117,7 @@ def do_pretraining(num_epochs, dataloader_source, dataloader_target, model, logg
             scheduler.step()
             optimizer.zero_grad()
             source_loss = 0.0
+            # TODO actually we should use both sources for all DECOs
             if mode != "target":
                 model.set_deco_mode("source")
                 for v, source_data in enumerate(source_batches):
@@ -202,40 +240,3 @@ def compute_batch_loss(cuda, lambda_val, model, img, label, domain_label):
         class_loss = entropy_loss(class_output)
     domain_loss = F.cross_entropy(domain_output, Variable(domain_label))
     return class_loss, domain_loss
-
-
-def get_args():
-    parser = argparse.ArgumentParser()
-    # optimizer
-    parser.add_argument('--optimizer', choices=optimizer_list, default=Optimizers.adam.value)
-    parser.add_argument('--lr', type=float, default=1e-3)
-    parser.add_argument('--batch_size', default=128, type=int)
-    parser.add_argument('--epochs', default=100, type=int)
-    parser.add_argument('--keep_pretrained_fixed', action="store_true")
-    # data
-    parser.add_argument('--image_size', type=int, default=28)
-    parser.add_argument('--data_aug_mode', default="train", choices=["train", "simple", "office"])
-    parser.add_argument('--source', default=[data_loader.mnist], choices=data_loader.dataset_list, nargs='+')
-    parser.add_argument('--target', default=data_loader.mnist_m, choices=data_loader.dataset_list)
-    parser.add_argument('--n_classes', default=10, type=int)
-    # losses
-    parser.add_argument('--DANN_weight', default=1.0, type=float)
-    parser.add_argument('--entropy_loss_weight', default=0.0, type=float, help="Entropy loss on target, default is 0")
-    # deco
-    parser.add_argument('--use_deco', action="store_true", help="If true use deco architecture")
-    parser.add_argument('--train_deco_weight', default=True, type=bool, help="Train the deco weight (True by default)")
-    parser.add_argument('--train_image_weight', default=False, type=bool,
-                        help="Train the image weight (False by default)")
-    parser.add_argument('--deco_no_residual', action="store_true", help="If set, no residual will be applied to DECO")
-    parser.add_argument('--deco_blocks', default=4, type=int)
-    parser.add_argument('--deco_kernels', default=64, type=int)
-    parser.add_argument('--deco_block_type', default='basic', choices=deco_types.keys(),
-                        help="Which kind of deco block to use")
-    parser.add_argument('--deco_output_channels', type=int, default=3, help="3 or 1")
-    parser.add_argument('--deco_mode', default="shared", choices=deco_modes.keys())
-    parser.add_argument('--deco_tanh', action="store_true", help="If set, tanh will be applied to DECO output")
-    # misc
-    parser.add_argument('--suffix', help="Will be added to end of name", default="")
-    parser.add_argument('--classifier', default=None, choices=classifier_list.keys())
-    parser.add_argument('--tmp_log', action="store_true", help="If set, logger will save to /tmp instead")
-    return parser.parse_args()
