@@ -80,16 +80,17 @@ def do_pretraining(num_epochs, dataloader_source, dataloader_target, model, logg
             scheduler.step()
             optimizer.zero_grad()
             source_loss = 0.0
-            import ipdb; ipdb.set_trace()
+            # import ipdb; ipdb.set_trace()
             if mode != "target":
                 model.set_deco_mode("source")
                 for v, source_data in enumerate(source_batches):
                     s_img, _ = source_data
                     img_in = Variable(s_img).cuda()
                     out = model.deco(img_in)
-                    loss = loss_f((out/2.0)+0.5, (img_in/2.0)+0.5)
+                    loss = loss_f((out / 2.0) + 0.5, (img_in / 2.0) + 0.5)
+                    # loss = loss_f(out, img_in)
                     loss.backward()
-                    source_loss += loss.cpu().numpy()
+                    source_loss += loss.data.cpu().numpy()
 
             # pretrain target deco only if needed
             target_loss = 0.0
@@ -98,9 +99,9 @@ def do_pretraining(num_epochs, dataloader_source, dataloader_target, model, logg
                 target_image, _ = target_data
                 img_in = Variable(target_image).cuda()
                 out = model.deco(img_in)
-                loss = loss_f((out/2.0)+0.5, (img_in/2.0)+0.5)
+                loss = loss_f((out / 2.0) + 0.5, (img_in / 2.0) + 0.5)
                 loss.backward()
-                target_loss = loss.cpu().numpy()
+                target_loss = loss.data.cpu().numpy()
             optimizer.step()
             if i == 0:
                 source_images = Variable(s_img[:9], volatile=True).cuda()

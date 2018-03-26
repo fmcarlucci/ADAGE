@@ -80,7 +80,6 @@ class Combo(nn.Module):
     def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
         super(Combo, self).__init__()
         self.net = get_classifier(classifier, domain_classes, n_classes)
-        self.use_tanh = deco_args.use_tanh
         if isinstance(self.net, AlexNetStyleDANN):
             self.deco_architecture = DECO
         else:
@@ -91,8 +90,6 @@ class Combo(nn.Module):
 
     def forward(self, input_data, lambda_val):
         input_data = self.deco(input_data)
-        if self.use_tanh:
-            input_data = torch.tanh(input_data)
         return self.net(input_data, lambda_val)
 
     def get_trainable_params(self):
@@ -189,6 +186,7 @@ class BasicDECO(nn.Module):
             self.image_weight = Variable(torch.FloatTensor(1)).cuda()
         self.deco_weight.data.fill_(deco_args.deco_weight)
         self.image_weight.data.fill_(1.0)
+        self.use_tanh = deco_args.use_tanh
 
     def init_weights(self):
         for m in self.modules():
@@ -201,13 +199,17 @@ class BasicDECO(nn.Module):
 
     def weighted_sum(self, input_data, x):
         if self.no_residual:
-            # TODO: implement tanh mode
             self.ratio = input_data.norm() / x.norm()
+            if self.use_tanh:
+                x = torch.tanh(x)
             return x
         x = self.deco_weight * x
         input_data = self.image_weight * input_data
         self.ratio = input_data.norm() / x.norm()
-        return x + input_data
+        if self.use_tanh:
+            return torch.tanh(x + input_data)
+        else:
+            return x + input_data
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
