@@ -100,7 +100,6 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
         loss = entropy_weight * entropy_target * lambda_val + dann_weight * err_t_domain
         loss.backward()
 
-
         # err = dann_weight * err_t_domain + dann_weight * err_s_domain + err_s_label + entropy_weight * entropy_target * lambda_val
         optimizer.step()
         optimizer.zero_grad()
@@ -114,9 +113,10 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
                 source_images = model.deco(source_images)
                 model.set_deco_mode("target")
                 target_images = model.deco(target_images)
-                logger.scalar_summary("aux/deco_to_image_ratio", model.get_deco().ratio.data.cpu()[0], epoch)
-                logger.scalar_summary("aux/deco_weight", model.get_deco().deco_weight.data.cpu()[0], epoch)
-                logger.scalar_summary("aux/image_weight", model.get_deco().image_weight.data.cpu()[0], epoch)
+                for prefix, deco in model.get_decos():
+                    logger.scalar_summary("aux/deco_to_image_ratio" + prefix, deco.ratio.data.cpu()[0], epoch)
+                    logger.scalar_summary("aux/deco_weight" + prefix, deco.deco_weight.data.cpu()[0], epoch)
+                    logger.scalar_summary("aux/image_weight" + prefix, deco.image_weight.data.cpu()[0], epoch)
             logger.image_summary("images/source", to_grid(to_np(source_images)), epoch)
             logger.image_summary("images/target", to_grid(to_np(target_images)), epoch)
             logger.scalar_summary("aux/p", p, epoch)

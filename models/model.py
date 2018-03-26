@@ -12,7 +12,7 @@ import torch.nn.functional as func
 from caffenet.caffenet_pytorch import load_caffenet
 from models.torch_future import Flatten
 
-deco_starting_weight = 0.001
+deco_starting_weight = 0.1
 
 
 class DecoArgs:
@@ -45,6 +45,7 @@ def get_net(args):
 
     for p in my_net.parameters():
         p.requires_grad = True
+    print(my_net)
     return my_net
 
 
@@ -95,19 +96,7 @@ class Combo(nn.Module):
         return self.net(input_data, lambda_val)
 
     def get_trainable_params(self):
-        return itertools.chain(self.deco.parameters(), self.net.get_trainable_params())
-
-
-class SharedCombo(Combo):
-    def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
-        super(SharedCombo, self).__init__(deco_args, classifier, domain_classes, n_classes)
-        self._deconet = self.deco_architecture(deco_args)
-        self.domain_transforms = {"source": self._deconet,
-                                  "target": self._deconet}
-        self.deco = self.domain_transforms["source"]
-
-    def get_deco(self):
-        return self.deco
+        return itertools.chain(self.get_deco_parameters(), self.net.get_trainable_params())
 
 
 class SourceOnlyCombo(Combo):
@@ -119,8 +108,26 @@ class SourceOnlyCombo(Combo):
                                   "target": self.target}
         self.deco = self.domain_transforms["source"]
 
-    def get_deco(self):
-        return self.source
+    def get_decos(self, mode=None):
+        return [("_source", self.source)]
+
+    def get_deco_parameters(self):
+        return self.source.parameters()
+
+
+class SharedCombo(Combo):
+    def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
+        super(SharedCombo, self).__init__(deco_args, classifier, domain_classes, n_classes)
+        self._deconet = self.deco_architecture(deco_args)
+        self.domain_transforms = {"source": self._deconet,
+                                  "target": self._deconet}
+        self.deco = self.domain_transforms["source"]
+
+    def get_decos(self, mode=None):
+        return [("", self.deco)]
+
+    def get_deco_parameters(self):
+        return self.deco.parameters()
 
 
 class TargetOnlyCombo(Combo):
@@ -132,8 +139,11 @@ class TargetOnlyCombo(Combo):
                                   "target": self.target}
         self.deco = self.domain_transforms["source"]
 
-    def get_deco(self):
-        return self.target
+    def get_decos(self, mode=None):
+        return [("_target", self.target)]
+
+    def get_deco_parameters(self):
+        return self.target.parameters()
 
 
 class BothCombo(Combo):
@@ -145,8 +155,13 @@ class BothCombo(Combo):
                                   "target": self.target}
         self.deco = self.domain_transforms["source"]
 
-    def get_deco(self):
-        return self.source
+    def get_deco_parameters(self):
+        return itertools.chain(self.source.parameters(), self.target.parameters())
+
+    def get_decos(self, mode=None):
+        if mode:
+            return self.domain_transforms[mode]
+        return ("_source", self.source), ("_target", self.target)
 
 
 deco_modes = {"shared": SharedCombo,
@@ -220,7 +235,6 @@ class DECO_mini(BasicDECO):
         self.layer1 = self._make_layer(deco_args.block, self.inplanes, deco_args.n_layers)
         self.conv_out = nn.Conv2d(self.inplanes * deco_args.block.expansion, deco_args.output_channels, 1)
         self.init_weights()
-        print(self)
 
     def forward(self, input_data):
         input_data = input_data.expand(input_data.data.shape[0], 3, input_data.data.shape[2], input_data.data.shape[3])
@@ -245,7 +259,6 @@ class DECO(BasicDECO):
         self.layer1 = self._make_layer(deco_args.block, self.inplanes, deco_args.n_layers)
         self.conv_out = nn.Conv2d(self.inplanes * deco_args.block.expansion, deco_args.output_channels, 1)
         self.init_weights()
-        print(self)
 
     def forward(self, input_data):
         input_data = input_data.expand(input_data.data.shape[0], 3, input_data.data.shape[2], input_data.data.shape[3])
