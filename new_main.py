@@ -55,7 +55,8 @@ optimizer, scheduler = get_optimizer_and_scheduler(args.optimizer, my_net, args.
 if cuda:
     my_net = my_net.cuda()
 
-do_pretraining(100, dataloader_source, dataloader_target, my_net, logger, args.deco_mode)
+if args.deco_pretrain > 0:
+    do_pretraining(args.deco_pretrain, dataloader_source, dataloader_target, my_net, logger, args.deco_mode)
 start = time.time()
 # training
 for epoch in range(n_epoch):

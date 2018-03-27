@@ -44,6 +44,7 @@ def get_args():
     parser.add_argument('--deco_output_channels', type=int, default=3, help="3 or 1")
     parser.add_argument('--deco_mode', default="shared", choices=deco_modes.keys())
     parser.add_argument('--deco_tanh', action="store_true", help="If set, tanh will be applied to DECO output")
+    parser.add_argument('--deco_pretrain', default=0, type=int, help="Number of epoch to pretrain DECO (default is 0)")
     # misc
     parser.add_argument('--suffix', help="Will be added to end of name", default="")
     parser.add_argument('--classifier', default=None, choices=classifier_list.keys())
@@ -61,6 +62,8 @@ def get_name(args, seed):
     if args.use_deco:
         name += "_deco%d_%d_%s_%dc" % (
             args.deco_blocks, args.deco_kernels, args.deco_block_type, args.deco_output_channels)
+        if args.deco_pretrain > 0:
+            name += "_pretrain%d" % args.deco_pretrain
         if args.deco_mode != "shared":
             name += "_" + args.deco_mode
         if args.deco_no_residual:
