@@ -27,6 +27,7 @@ class DecoArgs:
         self.no_residual = args.deco_no_residual
         self.mode = args.deco_mode
         self.use_tanh = args.deco_tanh
+        self.no_pool = args.deco_no_pool
 
 
 def get_classifier(name, domain_classes, n_classes):
@@ -254,11 +255,16 @@ class DECO_mini(BasicDECO):
 class DECO(BasicDECO):
     def __init__(self, deco_args):
         super(DECO, self).__init__(deco_args)
-        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=5, stride=2, padding=2,
-                               bias=False)
+        self.no_pool = deco_args.no_pool
+        if self.no_pool:
+            self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=5, stride=4, padding=2,
+                                   bias=False)
+        else:
+            self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=5, stride=2, padding=2,
+                                   bias=False)
+            self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.bn1 = nn.BatchNorm2d(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(deco_args.block, self.inplanes, deco_args.n_layers)
         self.conv_out = nn.Conv2d(self.inplanes * deco_args.block.expansion, deco_args.output_channels, 1)
         self.init_weights()
@@ -268,7 +274,8 @@ class DECO(BasicDECO):
         x = self.conv1(input_data)
         x = self.bn1(x)
         x = self.relu(x)
-        x = self.maxpool(x)
+        if self.no_pool is False:
+            x = self.maxpool(x)
 
         x = self.layer1(x)
         x = self.conv_out(x)

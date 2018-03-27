@@ -45,6 +45,7 @@ def get_args():
     parser.add_argument('--deco_mode', default="shared", choices=deco_modes.keys())
     parser.add_argument('--deco_tanh', action="store_true", help="If set, tanh will be applied to DECO output")
     parser.add_argument('--deco_pretrain', default=0, type=int, help="Number of epoch to pretrain DECO (default is 0)")
+    parser.add_argument('--deco_no_pool', action="store_true")
     # misc
     parser.add_argument('--suffix', help="Will be added to end of name", default="")
     parser.add_argument('--classifier', default=None, choices=classifier_list.keys())
