@@ -267,7 +267,7 @@ class DECO(BasicDECO):
         self.relu = nn.ReLU(inplace=True)
         self.layer1 = self._make_layer(deco_args.block, self.inplanes, deco_args.n_layers)
         if self.deco_args.deconv:
-            self.deconv = nn.ConvTranspose2d(self.inplanes * deco_args.block.expansion, deco_args.output_channels, 3, padding=1, stride=4)
+            self.deconv = nn.ConvTranspose2d(self.inplanes * deco_args.block.expansion, deco_args.output_channels, 5, padding=2, stride=4)
         else:
             self.conv_out = nn.Conv2d(self.inplanes * deco_args.block.expansion, deco_args.output_channels, 1)
         self.init_weights()
