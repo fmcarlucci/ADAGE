@@ -53,10 +53,10 @@ def get_args():
 
 
 def get_name(args, seed):
-    name = "%s_lr:%g_BS:%d_epochs:%d_IS:%d_DannW:%g_DA%s" % (args.optimizer, args.lr, args.batch_size, args.epochs,
+    name = "%s_lr:%g_BS:%d_eps:%d_IS:%d_DW:%g_DA%s" % (args.optimizer, args.lr, args.batch_size, args.epochs,
                                                              args.image_size, args.DANN_weight, args.data_aug_mode)
     if args.keep_pretrained_fixed:
-        name += "_pretrainedFixed"
+        name += "_freezeNet"
     if args.entropy_loss_weight > 0.0:
         name += "_entropy:%g" % args.entropy_loss_weight
     if args.use_deco:
@@ -67,7 +67,7 @@ def get_name(args, seed):
         if args.deco_mode != "shared":
             name += "_" + args.deco_mode
         if args.deco_no_residual:
-            name += "_no_residual"
+            name += "_no_res"
         if args.deco_tanh:
             name += "_tanh"
         elif args.train_deco_weight or args.train_image_weight:
