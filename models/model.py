@@ -28,6 +28,7 @@ class DecoArgs:
         self.mode = args.deco_mode
         self.use_tanh = args.deco_tanh
         self.no_pool = args.deco_no_pool
+        self.deconv = args.deco_deconv
 
 
 def get_classifier(name, domain_classes, n_classes):
@@ -173,7 +174,7 @@ class BasicDECO(nn.Module):
         super(BasicDECO, self).__init__()
         self.inplanes = deco_args.deco_kernels
         self.ratio = 1.0
-        self.no_residual = deco_args.no_residual
+        self.deco_args = deco_args
         if self.no_residual:
             deco_args.train_deco_weight = False
             deco_args.train_image_weight = False
@@ -199,7 +200,7 @@ class BasicDECO(nn.Module):
                 m.bias.data.zero_()
 
     def weighted_sum(self, input_data, x):
-        if self.no_residual:
+        if self.deco_args.no_residual:
             self.ratio = input_data.norm() / x.norm()
             if self.use_tanh:
                 x = torch.tanh(x)
@@ -255,8 +256,7 @@ class DECO_mini(BasicDECO):
 class DECO(BasicDECO):
     def __init__(self, deco_args):
         super(DECO, self).__init__(deco_args)
-        self.no_pool = deco_args.no_pool
-        if self.no_pool:
+        if self.deco_args.no_pool:
             self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=5, stride=4, padding=2,
                                    bias=False)
         else:
@@ -266,7 +266,10 @@ class DECO(BasicDECO):
         self.bn1 = nn.BatchNorm2d(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.layer1 = self._make_layer(deco_args.block, self.inplanes, deco_args.n_layers)
-        self.conv_out = nn.Conv2d(self.inplanes * deco_args.block.expansion, deco_args.output_channels, 1)
+        if self.deco_args.deconv:
+            self.deconv = nn.ConvTranspose2d(self.inplanes * deco_args.block.expansion, deco_args.output_channels, 3, padding=1, dilation=4)
+        else:
+            self.conv_out = nn.Conv2d(self.inplanes * deco_args.block.expansion, deco_args.output_channels, 1)
         self.init_weights()
 
     def forward(self, input_data):
@@ -274,12 +277,15 @@ class DECO(BasicDECO):
         x = self.conv1(input_data)
         x = self.bn1(x)
         x = self.relu(x)
-        if self.no_pool is False:
+        if self.deco_args.no_pool is False:
             x = self.maxpool(x)
 
         x = self.layer1(x)
-        x = self.conv_out(x)
-        x = nn.functional.upsample(x, scale_factor=4, mode='bilinear')
+        if self.deco_args.deconv:
+            x = self.deconv(x)
+        else:
+            x = self.conv_out(x)
+            x = nn.functional.upsample(x, scale_factor=4, mode='bilinear')
 
         return self.weighted_sum(input_data, x)
 
