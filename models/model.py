@@ -175,14 +175,14 @@ class BasicDECO(nn.Module):
         self.inplanes = deco_args.deco_kernels
         self.ratio = 1.0
         self.deco_args = deco_args
-        if self.no_residual:
+        if self.deco_args.no_residual:
             deco_args.train_deco_weight = False
             deco_args.train_image_weight = False
-        if deco_args.train_deco_weight:
+        if self.deco_args.train_deco_weight:
             self.deco_weight = Parameter(torch.FloatTensor(1), requires_grad=True)
         else:
             self.deco_weight = Variable(torch.FloatTensor(1)).cuda()
-        if deco_args.train_image_weight:
+        if self.deco_args.train_image_weight:
             self.image_weight = Parameter(torch.FloatTensor(1), requires_grad=True)
         else:
             self.image_weight = Variable(torch.FloatTensor(1)).cuda()
