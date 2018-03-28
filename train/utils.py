@@ -154,8 +154,8 @@ def pretrain_deco(num_epochs, dataloader_source, dataloader_target, model, logge
                 logger.image_summary("reconstruction/%s/target" % mode, to_grid(to_np(target_images)), epoch)
 
         print("%d/%d - Reconstruction loss source: %g, target %g" % (epoch, num_epochs, source_loss, target_loss))
-        logger.scalar_summary("reconstruction/source", source_loss, epoch)
-        logger.scalar_summary("reconstruction/target", target_loss, epoch)
+        logger.scalar_summary("reconstruction/%s/source" % mode, source_loss, epoch)
+        logger.scalar_summary("reconstruction/%s/target" % mode, target_loss, epoch)
 
 
 def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, logger, n_epoch, cuda,
