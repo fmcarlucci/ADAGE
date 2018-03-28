@@ -113,7 +113,7 @@ def do_pretraining(num_epochs, dataloader_source, dataloader_target, model, logg
 
 
 def pretrain_deco(num_epochs, dataloader_source, dataloader_target, model, logger, mode):
-    optimizer, scheduler = get_optimizer_and_scheduler(Optimizers.adam.value, model, num_epochs, 0.001, True)
+    optimizer, scheduler = get_optimizer_and_scheduler(Optimizers.adam.value, model, num_epochs, 0.001, False)
     loss_f = nn.MSELoss().cuda()
     for epoch in range(num_epochs):
         model.train()
