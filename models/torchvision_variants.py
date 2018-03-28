@@ -2,7 +2,7 @@ from torch import nn
 from torch.utils import model_zoo
 from torchvision.models.alexnet import model_urls
 
-import models.model as models
+from models import model as models
 
 
 class SmallAlexNet(nn.Module):
