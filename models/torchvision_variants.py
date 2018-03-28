@@ -2,7 +2,7 @@ from torch import nn
 from torch.utils import model_zoo
 from torchvision.models.alexnet import model_urls
 
-from models.model import PassData
+import models.model as models
 
 
 class SmallAlexNet(nn.Module):
@@ -12,7 +12,7 @@ class SmallAlexNet(nn.Module):
         self.features = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=11, stride=2, padding=3),
             nn.ReLU(inplace=True),
-            PassData(), # this is here to simplify the pretrained weight loading
+            models.PassData(), # this is here to simplify the pretrained weight loading
             nn.Conv2d(64, 192, kernel_size=5, padding=2),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2),

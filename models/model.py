@@ -11,7 +11,7 @@ import torch.nn.functional as func
 
 from caffenet.caffenet_pytorch import load_caffenet
 from models.torch_future import Flatten
-from models.torchvision_variants import small_alexnet
+import models.torchvision_variants as tv
 
 image_weight = 1.0
 
@@ -462,7 +462,7 @@ class AlexNet(AlexNetStyleDANN):
 class SmallAlexNet(AlexNet):
     def __init__(self, domain_classes, n_classes):
         super(AlexNet, self).__init__()
-        pretrained = small_alexnet(pretrained=True)
+        pretrained = tv.small_alexnet(pretrained=True)
         self.build_self(pretrained, domain_classes, n_classes)
 
 
