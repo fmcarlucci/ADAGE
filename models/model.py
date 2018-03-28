@@ -86,7 +86,7 @@ class Combo(nn.Module):
         super(Combo, self).__init__()
         self.net = get_classifier(classifier, domain_classes, n_classes)
         if isinstance(self.net, SmallAlexNet):
-            self.deco_architecture = Tiny_DECO
+            self.deco_architecture = DECO_mini
         elif isinstance(self.net, AlexNetStyleDANN) and not isinstance(self.net, SmallAlexNet):
             self.deco_architecture = DECO
         else:
