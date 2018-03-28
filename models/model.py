@@ -11,6 +11,7 @@ import torch.nn.functional as func
 
 from caffenet.caffenet_pytorch import load_caffenet
 from models.torch_future import Flatten
+from models.torchvision_variants import small_alexnet
 
 image_weight = 1.0
 
@@ -84,7 +85,7 @@ class Combo(nn.Module):
     def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
         super(Combo, self).__init__()
         self.net = get_classifier(classifier, domain_classes, n_classes)
-        if isinstance(self.net, AlexNetStyleDANN):
+        if isinstance(self.net, AlexNetStyleDANN) and not isinstance(self.net, SmallAlexNet):
             self.deco_architecture = DECO
         else:
             self.deco_architecture = DECO_mini
@@ -269,7 +270,8 @@ class DECO(BasicDECO):
         self.relu = nn.ReLU(inplace=True)
         self.layer1 = self._make_layer(deco_args.block, self.inplanes, deco_args.n_layers)
         if self.deco_args.deconv:
-            self.deconv = nn.ConvTranspose2d(self.inplanes * deco_args.block.expansion, deco_args.output_channels, 5, padding=2, stride=4)
+            self.deconv = nn.ConvTranspose2d(self.inplanes * deco_args.block.expansion, deco_args.output_channels, 5,
+                                             padding=2, stride=4)
         else:
             self.conv_out = nn.Conv2d(self.inplanes * deco_args.block.expansion, deco_args.output_channels, 1)
         self.init_weights()
@@ -428,6 +430,9 @@ class AlexNet(AlexNetStyleDANN):
     def __init__(self, domain_classes, n_classes):
         super(AlexNet, self).__init__()
         pretrained = alexnet(pretrained=True)
+        self.build_self(pretrained, domain_classes, n_classes)
+
+    def build_self(self, pretrained, domain_classes, n_classes):
         self._convs = pretrained.features
         self.bottleneck = nn.Linear(4096, 256)  # bottleneck
         self._classifier = nn.Sequential(
@@ -452,6 +457,13 @@ class AlexNet(AlexNetStyleDANN):
             nn.ReLU(inplace=True),
             nn.Linear(1024, domain_classes),
         )
+
+
+class SmallAlexNet(AlexNet):
+    def __init__(self, domain_classes, n_classes):
+        super(AlexNet, self).__init__()
+        pretrained = small_alexnet(pretrained=True)
+        self.build_self(pretrained, domain_classes, n_classes)
 
 
 class CaffeNet(AlexNetStyleDANN):
@@ -511,4 +523,5 @@ classifier_list = {"roided_lenet": CNNModel,
                    "svhn": SVHNModel,
                    "alexnet": AlexNet,
                    "alexnet_no_bottleneck": AlexNetNoBottleneck,
-                   "caffenet": CaffeNet}
+                   "caffenet": CaffeNet,
+                   "small_alexnet": SmallAlexNet}
