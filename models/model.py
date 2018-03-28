@@ -85,7 +85,9 @@ class Combo(nn.Module):
     def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
         super(Combo, self).__init__()
         self.net = get_classifier(classifier, domain_classes, n_classes)
-        if isinstance(self.net, AlexNetStyleDANN) and not isinstance(self.net, SmallAlexNet):
+        if isinstance(self.net, SmallAlexNet):
+            self.deco_architecture = Tiny_DECO
+        elif isinstance(self.net, AlexNetStyleDANN) and not isinstance(self.net, SmallAlexNet):
             self.deco_architecture = DECO
         else:
             self.deco_architecture = DECO_mini
@@ -290,6 +292,28 @@ class DECO(BasicDECO):
         else:
             x = self.conv_out(x)
             x = nn.functional.upsample(x, scale_factor=4, mode='bilinear')
+
+        return self.weighted_sum(input_data, x)
+
+
+class Tiny_DECO(BasicDECO):
+    def __init__(self, deco_args):
+        super(Tiny_DECO, self).__init__(deco_args)
+        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=5, stride=4, padding=2, bias=False)
+        self.bn1 = nn.BatchNorm2d(self.inplanes)
+        self.relu = nn.ReLU(inplace=True)
+        self.layer1 = self._make_layer(deco_args.block, self.inplanes, deco_args.n_layers)
+        self.conv_out = nn.Conv2d(self.inplanes * deco_args.block.expansion, deco_args.output_channels, 1)
+        self.init_weights()
+
+    def forward(self, input_data):
+        input_data = input_data.expand(input_data.data.shape[0], 3, input_data.data.shape[2], input_data.data.shape[3])
+        x = self.conv1(input_data)
+        x = self.bn1(x)
+        x = self.relu(x)
+
+        x = self.layer1(x)
+        x = self.conv_out(x)
 
         return self.weighted_sum(input_data, x)
 
