@@ -56,7 +56,7 @@ def get_args():
 
 def get_name(args, seed):
     name = "%s_lr:%g_BS:%d_eps:%d_IS:%d_DW:%g_DA%s" % (args.optimizer, args.lr, args.batch_size, args.epochs,
-                                                             args.image_size, args.DANN_weight, args.data_aug_mode)
+                                                       args.image_size, args.DANN_weight, args.data_aug_mode)
     if args.keep_pretrained_fixed:
         name += "_freezeNet"
     if args.entropy_loss_weight > 0.0:
@@ -106,7 +106,13 @@ def ensure_dir(file_path):
         os.makedirs(directory)
 
 
-def do_pretraining(num_epochs, dataloader_source, dataloader_target, model, logger, mode="shared"):
+def do_pretraining(num_epochs, dataloader_source, dataloader_target, model, logger):
+    for name, deco in model.get_decos():
+        print("Pretraining " + name)
+        pretrain_deco(num_epochs, dataloader_source, dataloader_target, deco, logger, name)
+
+
+def pretrain_deco(num_epochs, dataloader_source, dataloader_target, model, logger, mode):
     optimizer, scheduler = get_optimizer_and_scheduler(Optimizers.adam.value, model, num_epochs, 0.001, True)
     loss_f = nn.MSELoss().cuda()
     for epoch in range(num_epochs):
@@ -122,37 +128,30 @@ def do_pretraining(num_epochs, dataloader_source, dataloader_target, model, logg
             scheduler.step()
             optimizer.zero_grad()
             source_loss = 0.0
-            # TODO actually we should use both sources for all DECOs
-            if mode != "target":
-                model.set_deco_mode("source")
-                for v, source_data in enumerate(source_batches):
-                    s_img, _ = source_data
-                    img_in = Variable(s_img).cuda()
-                    out = model.deco(img_in)
-                    loss = loss_f(out, img_in)
-                    loss.backward()
-                    source_loss += loss.data.cpu().numpy()
+            for v, source_data in enumerate(source_batches):
+                s_img, _ = source_data
+                img_in = Variable(s_img).cuda()
+                out = model(img_in)
+                loss = loss_f(out, img_in)
+                loss.backward()
+                source_loss += loss.data.cpu().numpy()
 
             # pretrain target deco only if needed
             target_loss = 0.0
-            if mode != "source":
-                model.set_deco_mode("target")
-                target_image, _ = target_data
-                img_in = Variable(target_image).cuda()
-                out = model.deco(img_in)
-                loss = loss_f(out, img_in)
-                loss.backward()
-                target_loss = loss.data.cpu().numpy()
+            target_image, _ = target_data
+            img_in = Variable(target_image).cuda()
+            out = model(img_in)
+            loss = loss_f(out, img_in)
+            loss.backward()
+            target_loss = loss.data.cpu().numpy()
             optimizer.step()
             if i == 0:
                 source_images = Variable(s_img[:9], volatile=True).cuda()
                 target_images = Variable(target_image[:9], volatile=True).cuda()
-                model.set_deco_mode("source")
-                source_images = model.deco(source_images)
-                model.set_deco_mode("target")
-                target_images = model.deco(target_images)
-                logger.image_summary("reconstruction/source", to_grid(to_np(source_images)), epoch)
-                logger.image_summary("reconstruction/target", to_grid(to_np(target_images)), epoch)
+                source_images = model(source_images)
+                target_images = model(target_images)
+                logger.image_summary("reconstruction/%s/source" % mode, to_grid(to_np(source_images)), epoch)
+                logger.image_summary("reconstruction/%s/target" % mode, to_grid(to_np(target_images)), epoch)
 
         print("%d/%d - Reconstruction loss source: %g, target %g" % (epoch, num_epochs, source_loss, target_loss))
         logger.scalar_summary("reconstruction/source", source_loss, epoch)
@@ -208,10 +207,10 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
                 source_images = model.deco(source_images)
                 model.set_deco_mode("target")
                 target_images = model.deco(target_images)
-                for prefix, deco in model.get_decos():
-                    logger.scalar_summary("aux/deco_to_image_ratio" + prefix, deco.ratio.data.cpu()[0], epoch)
-                    logger.scalar_summary("aux/deco_weight" + prefix, deco.deco_weight.data.cpu()[0], epoch)
-                    logger.scalar_summary("aux/image_weight" + prefix, deco.image_weight.data.cpu()[0], epoch)
+                for name, deco in model.get_decos():
+                    logger.scalar_summary("aux/%s/deco_to_image_ratio" % name, deco.ratio.data.cpu()[0], epoch)
+                    logger.scalar_summary("aux/%s/deco_weight" % name, deco.deco_weight.data.cpu()[0], epoch)
+                    logger.scalar_summary("aux/%s/image_weight" % name, deco.image_weight.data.cpu()[0], epoch)
             logger.image_summary("images/source", to_grid(to_np(source_images)), epoch)
             logger.image_summary("images/target", to_grid(to_np(target_images)), epoch)
             logger.scalar_summary("aux/p", p, epoch)

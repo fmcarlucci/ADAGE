@@ -108,7 +108,7 @@ class SourceOnlyCombo(Combo):
         self.deco = self.domain_transforms["source"]
 
     def get_decos(self, mode=None):
-        return [("_source", self.source)]
+        return [("source", self.source)]
 
     def get_deco_parameters(self):
         return self.source.parameters()
@@ -123,7 +123,7 @@ class SharedCombo(Combo):
         self.deco = self.domain_transforms["source"]
 
     def get_decos(self, mode=None):
-        return [("", self.deco)]
+        return [("shared", self.deco)]
 
     def get_deco_parameters(self):
         return self.deco.parameters()
@@ -139,7 +139,7 @@ class TargetOnlyCombo(Combo):
         self.deco = self.domain_transforms["source"]
 
     def get_decos(self, mode=None):
-        return [("_target", self.target)]
+        return [("target", self.target)]
 
     def get_deco_parameters(self):
         return self.target.parameters()
@@ -160,7 +160,7 @@ class BothCombo(Combo):
     def get_decos(self, mode=None):
         if mode:
             return self.domain_transforms[mode]
-        return ("_source", self.source), ("_target", self.target)
+        return ("source", self.source), ("target", self.target)
 
 
 deco_modes = {"shared": SharedCombo,
