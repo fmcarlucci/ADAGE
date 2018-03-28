@@ -132,7 +132,10 @@ def pretrain_deco(num_epochs, dataloader_source, dataloader_target, model, logge
                 s_img, _ = source_data
                 img_in = Variable(s_img).cuda()
                 out = model(img_in)
-                loss = loss_f(out, img_in)
+                if out.shape == img_in.shape:
+                    loss = loss_f(out, img_in)
+                else:
+                    loss = loss_f(out, nn.functional.avg_pool2d(img_in, 4, 4))
                 loss.backward()
                 source_loss += loss.data.cpu().numpy()
 
@@ -141,7 +144,10 @@ def pretrain_deco(num_epochs, dataloader_source, dataloader_target, model, logge
             target_image, _ = target_data
             img_in = Variable(target_image).cuda()
             out = model(img_in)
-            loss = loss_f(out, img_in)
+            if out.shape == img_in.shape:
+                loss = loss_f(out, img_in)
+            else:
+                loss = loss_f(out, nn.functional.avg_pool2d(img_in, 4, 4))
             loss.backward()
             target_loss = loss.data.cpu().numpy()
             optimizer.step()
