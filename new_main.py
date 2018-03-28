@@ -56,7 +56,7 @@ if cuda:
     my_net = my_net.cuda()
 
 if args.deco_pretrain > 0:
-    do_pretraining(args.deco_pretrain, dataloader_source, dataloader_target, my_net, logger, args.deco_mode)
+    do_pretraining(args.deco_pretrain, dataloader_source, dataloader_target, my_net, logger)
 start = time.time()
 # training
 for epoch in range(n_epoch):
