@@ -12,6 +12,8 @@ import torch.nn.functional as func
 from caffenet.caffenet_pytorch import load_caffenet
 from models.torch_future import Flatten
 
+image_weight = 1.0
+
 deco_starting_weight = 0.0001
 
 
@@ -187,7 +189,7 @@ class BasicDECO(nn.Module):
         else:
             self.image_weight = Variable(torch.FloatTensor(1)).cuda()
         self.deco_weight.data.fill_(deco_args.deco_weight)
-        self.image_weight.data.fill_(1.0)
+        self.image_weight.data.fill_(image_weight)
         self.use_tanh = deco_args.use_tanh
 
     def init_weights(self):
