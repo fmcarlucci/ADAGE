@@ -93,8 +93,8 @@ def load_dataset(img_transform, dataset_name):
     elif dataset_name == webcam:
         dataset = datasets.ImageFolder('dataset/webcam', transform=img_transform)
     elif type(dataset_name) is list:
-        dataset = ConcatDataset([load_dataset(img_transform, dset) for dset in dataset_name])
-    return dataset
+        return ConcatDataset([load_dataset(img_transform, dset) for dset in dataset_name])
+    return RgbWrapper(dataset)
 
 
 class GetLoader(data.Dataset):
@@ -165,6 +165,18 @@ def get_dataloader(dataset_name, batch_size, image_size, mode):
         shuffle=True,
         drop_last=True,
         num_workers=4)
+
+
+class RgbWrapper(torch.utils.data.Dataset):
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def __len__(self):
+        return self.dataset.__len__()
+
+    def __get_item(self, i):
+        data = self.dataset.__get_item(i)
+        return data.expand(data.data.shape[0], 3, data.data.shape[2], data.data.shape[3])
 
 
 class ImageFolderWithPath(ImageFolder):
