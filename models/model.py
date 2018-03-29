@@ -247,7 +247,6 @@ class DECO_mini(BasicDECO):
         self.init_weights()
 
     def forward(self, input_data):
-        input_data = input_data.expand(input_data.data.shape[0], 3, input_data.data.shape[2], input_data.data.shape[3])
         x = self.conv1(input_data)
         x = self.bn1(x)
         x = self.relu(x)
@@ -279,7 +278,6 @@ class DECO(BasicDECO):
         self.init_weights()
 
     def forward(self, input_data):
-        input_data = input_data.expand(input_data.data.shape[0], 3, input_data.data.shape[2], input_data.data.shape[3])
         x = self.conv1(input_data)
         x = self.bn1(x)
         x = self.relu(x)
@@ -307,7 +305,6 @@ class Tiny_DECO(BasicDECO):
         self.init_weights()
 
     def forward(self, input_data):
-        input_data = input_data.expand(input_data.data.shape[0], 3, input_data.data.shape[2], input_data.data.shape[3])
         x = self.conv1(input_data)
         x = self.bn1(x)
         x = self.relu(x)
@@ -326,7 +323,6 @@ class BasicDANN(nn.Module):
         self.class_classifier = None
 
     def forward(self, input_data, lambda_val):
-        input_data = input_data.expand(input_data.data.shape[0], 3, input_data.data.shape[2], input_data.data.shape[3])
         feature = self.features(input_data)
         feature = feature.view(input_data.shape[0], -1)
         reverse_feature = ReverseLayerF.apply(feature, lambda_val)
@@ -434,7 +430,6 @@ class CNNModel(nn.Module):
         self.domain_classifier.add_module('d_fc2', nn.Linear(100, domain_classes))
 
     def forward(self, input_data, lambda_val):
-        input_data = input_data.expand(input_data.data.shape[0], 3, 28, 28)
         feature = self.feature(input_data)
         feature = feature.view(-1, 50 * 4 * 4)
         reverse_feature = ReverseLayerF.apply(feature, lambda_val)
