@@ -175,7 +175,7 @@ class RgbWrapper(torch.utils.data.Dataset):
         return self.dataset.__len__()
 
     def __getitem__(self, i):
-        data, label = self.dataset.__get_item(i)
+        data, label = self.dataset.__getitem__(i)
         return data.expand(data.data.shape[0], 3, data.data.shape[2], data.data.shape[3]), label
 
 
