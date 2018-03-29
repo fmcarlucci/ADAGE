@@ -176,7 +176,7 @@ class RgbWrapper(torch.utils.data.Dataset):
 
     def __getitem__(self, i):
         data, label = self.dataset.__getitem__(i)
-        return data.expand(data.shape[0], 3, data.data.shape[2], data.data.shape[3]), label
+        return data.expand(data.shape[0], 3, data.shape[2], data.shape[3]), label
 
 
 class ImageFolderWithPath(ImageFolder):
