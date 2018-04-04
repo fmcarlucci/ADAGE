@@ -334,6 +334,9 @@ class BasicDANN(nn.Module):
     def get_trainable_params(self):
         return self.parameters()
 
+    def set_deco_mode(self, mode):
+        pass
+
 
 class MnistModel(BasicDANN):
     def __init__(self, domain_classes, n_classes):
@@ -398,7 +401,7 @@ class SVHNModel(BasicDANN):
         )
 
 
-class CNNModel(nn.Module):
+class CNNModel(BasicDANN):
     def __init__(self, domain_classes, n_classes):
         super(CNNModel, self).__init__()
         self.feature = nn.Sequential()
