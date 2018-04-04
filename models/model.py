@@ -103,6 +103,18 @@ class Combo(nn.Module):
         return itertools.chain(self.get_deco_parameters(), self.net.get_trainable_params())
 
 
+class NoDecoCombo(Combo):
+    def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
+        super(NoDecoCombo, self).__init__(deco_args, classifier, domain_classes, n_classes)
+        self.deco = PassData
+
+    def set_deco_mode(self, mode):
+        pass
+
+    def get_trainable_params(self):
+        return self.net.get_trainable_params()
+
+
 class SourceOnlyCombo(Combo):
     def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
         super(SourceOnlyCombo, self).__init__(deco_args, classifier, domain_classes, n_classes)
@@ -334,6 +346,7 @@ class BasicDANN(nn.Module):
     def get_trainable_params(self):
         return self.parameters()
 
+    # TODO: after refactoring, remove this
     def set_deco_mode(self, mode):
         pass
 
@@ -476,6 +489,7 @@ class CNNModel(BasicDANN):
         domain_output = self.domain_classifier(reverse_feature)
 
         return class_output, domain_output
+
 
 class AlexNet(BigDecoDANN):
     def __init__(self, domain_classes, n_classes):
