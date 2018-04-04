@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Function, Variable
 from torch.nn import Parameter
-from torchvision.models.resnet import BasicBlock, Bottleneck
+from torchvision.models.resnet import BasicBlock, Bottleneck, resnet50
 from torchvision.models.alexnet import alexnet
 import torch.nn.functional as func
 
@@ -87,7 +87,7 @@ class Combo(nn.Module):
         self.net = get_classifier(classifier, domain_classes, n_classes)
         if isinstance(self.net, SmallAlexNet):
             self.deco_architecture = DECO_mini
-        elif isinstance(self.net, AlexNetStyleDANN) and not isinstance(self.net, SmallAlexNet):
+        elif isinstance(self.net, BigDecoDANN):
             self.deco_architecture = DECO
         else:
             self.deco_architecture = DECO_mini
@@ -338,6 +338,42 @@ class BasicDANN(nn.Module):
         pass
 
 
+class BigDecoDANN(BasicDANN):
+    def get_trainable_params(self):
+        return itertools.chain(self.domain_classifier.parameters(), self.class_classifier.parameters(),
+                               self.bottleneck.parameters())
+
+
+class ResNet50(BigDecoDANN):
+    def __init__(self, domain_classes, n_classes):
+        super(ResNet50, self).__init__()
+        resnet = resnet50(pretrained=True)
+        self.features = nn.Sequential(
+            resnet.conv1,
+            resnet.bn1,
+            resnet.relu,
+            resnet.maxpool,
+            resnet.layer1,
+            resnet.layer2,
+            resnet.layer3,
+            resnet.layer4,
+            resnet.avgpool
+        )
+        self.class_classifier = nn.Linear(512 * Bottleneck.expansion, n_classes)
+        self.domain_classifier = nn.Sequential(
+            nn.Dropout(),
+            nn.Linear(512 * Bottleneck.expansion, 1024),  # pretrained.classifier[1]
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(1024, 1024),  # pretrained.classifier[4]
+            nn.ReLU(inplace=True),
+            nn.Linear(1024, domain_classes),
+        )
+
+    def get_trainable_params(self):
+        return itertools.chain(self.domain_classifier.parameters(), self.class_classifier.parameters())
+
+
 class MnistModel(BasicDANN):
     def __init__(self, domain_classes, n_classes):
         super(MnistModel, self).__init__()
@@ -441,14 +477,7 @@ class CNNModel(BasicDANN):
 
         return class_output, domain_output
 
-
-class AlexNetStyleDANN(BasicDANN):
-    def get_trainable_params(self):
-        return itertools.chain(self.domain_classifier.parameters(), self.class_classifier.parameters(),
-                               self.bottleneck.parameters())
-
-
-class AlexNet(AlexNetStyleDANN):
+class AlexNet(BigDecoDANN):
     def __init__(self, domain_classes, n_classes):
         super(AlexNet, self).__init__()
         pretrained = alexnet(pretrained=True)
@@ -488,7 +517,7 @@ class SmallAlexNet(AlexNet):
         self.build_self(pretrained, domain_classes, n_classes)
 
 
-class CaffeNet(AlexNetStyleDANN):
+class CaffeNet(BigDecoDANN):
     def __init__(self, domain_classes, n_classes):
         super(CaffeNet, self).__init__()
         pretrained = load_caffenet()
@@ -510,7 +539,7 @@ class CaffeNet(AlexNetStyleDANN):
         )
 
 
-class AlexNetNoBottleneck(AlexNetStyleDANN):
+class AlexNetNoBottleneck(BigDecoDANN):
     def __init__(self, domain_classes, n_classes):
         super(AlexNetNoBottleneck, self).__init__()
         pretrained = alexnet(pretrained=True)
@@ -546,4 +575,5 @@ classifier_list = {"roided_lenet": CNNModel,
                    "alexnet": AlexNet,
                    "alexnet_no_bottleneck": AlexNetNoBottleneck,
                    "caffenet": CaffeNet,
-                   "small_alexnet": SmallAlexNet}
+                   "small_alexnet": SmallAlexNet,
+                   "resnet50": ResNet50}
