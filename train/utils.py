@@ -159,7 +159,7 @@ def pretrain_deco(num_epochs, dataloader_source, dataloader_target, model, logge
 
 
 def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, logger, n_epoch, cuda,
-                dann_weight, entropy_weight):
+                dann_weight, entropy_weight, scheduler):
     model.train()
     len_dataloader = min(len(dataloader_source), len(dataloader_target))
     data_sources_iter = iter(dataloader_source)
@@ -167,6 +167,10 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
 
     batch_idx = 0
     while batch_idx < len_dataloader:
+        try:
+            scheduler.step_iter()
+        except:
+            pass
         absolute_iter_count = batch_idx + epoch * len_dataloader
         p = float(absolute_iter_count) / n_epoch / len_dataloader
         lambda_val = 2. / (1. + np.exp(-10 * p)) - 1

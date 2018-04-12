@@ -18,20 +18,20 @@ mnist_m_image_root = os.path.join('dataset', 'mnist_m')
 synth_image_root = os.path.join('dataset', 'SynthDigits')
 
 dataset_list = [mnist, mnist_m, svhn, synth, amazon, webcam]
-
+office_list = [amazon, webcam]
 
 def get_images_for_conversion(folder_path, image_size=228):
-    img_transform = get_transform(image_size, "test")
+    img_transform = get_transform(image_size, "test", None)
     return ImageFolderWithPath(folder_path, transform=img_transform)
 
 
 def get_dataset(name, image_size, mode="train"):
-    img_transform = get_transform(image_size, mode)
+    img_transform = get_transform(image_size, mode, name)
     dataset = load_dataset(img_transform, name)
     return dataset
 
 
-def get_transform(image_size, mode):
+def get_transform(image_size, mode, name):
     if mode == "train":
         img_transform = transforms.Compose([
             transforms.RandomResizedCrop(image_size, scale=(0.5, 1.0)),
@@ -41,11 +41,11 @@ def get_transform(image_size, mode):
         ])
     elif mode == "office":
         img_transform = transforms.Compose([
-            transforms.RandomResizedCrop(image_size, scale=(0.75, 1.0)),
+            transforms.RandomResizedCrop(image_size),
             transforms.RandomHorizontalFlip(),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+            # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
             transforms.ToTensor(),
-            transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
     elif mode == "simple":
         img_transform = transforms.Compose([
@@ -54,10 +54,16 @@ def get_transform(image_size, mode):
             transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         ])
     elif mode == "test":
+        if name in office_list:
+            mean = [0.485, 0.456, 0.406]
+            std = [0.229, 0.224, 0.225]
+        else:
+            mean = [0.5, 0.5, 0.5]
+            std = [0.5, 0.5, 0.5]
         img_transform = transforms.Compose([
             transforms.Resize(image_size),
             transforms.ToTensor(),
-            transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+            transforms.Normalize(mean=mean, std=std)
         ])
     return img_transform
 
