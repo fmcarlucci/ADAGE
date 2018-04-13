@@ -1,10 +1,11 @@
+import os
+
+import numpy as np
 import torch.utils
 import torch.utils.data as data
 from PIL import Image
-import os
 from torchvision import datasets
 from torchvision import transforms
-import numpy as np
 from torchvision.datasets import ImageFolder
 
 mnist = 'mnist'
@@ -13,12 +14,14 @@ svhn = 'svhn'
 synth = 'synth'
 webcam = "webcam"
 amazon = "amazon"
+dslr = "dslr"
 mnist_image_root = os.path.join('dataset', 'mnist')
 mnist_m_image_root = os.path.join('dataset', 'mnist_m')
 synth_image_root = os.path.join('dataset', 'SynthDigits')
 
-dataset_list = [mnist, mnist_m, svhn, synth, amazon, webcam]
-office_list = [amazon, webcam]
+office_list = [amazon, webcam, dslr]
+dataset_list = [mnist, mnist_m, svhn, synth] + office_list
+
 
 def get_images_for_conversion(folder_path, image_size=228):
     img_transform = get_transform(image_size, "test", None)
@@ -96,6 +99,8 @@ def load_dataset(img_transform, dataset_name):
         )
     elif dataset_name == amazon:
         dataset = datasets.ImageFolder('dataset/amazon', transform=img_transform)
+    elif dataset_name == dslr:
+        dataset = datasets.ImageFolder('dataset/dslr', transform=img_transform)
     elif dataset_name == webcam:
         dataset = datasets.ImageFolder('dataset/webcam', transform=img_transform)
     elif type(dataset_name) is list:
