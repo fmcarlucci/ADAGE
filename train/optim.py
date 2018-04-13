@@ -21,20 +21,27 @@ class Optimizers(Enum):
 optimizer_list = [v.value for v in Optimizers]
 
 
-def get_optimizer_and_scheduler(optim_name, net, max_epochs, lr, keep_pretrained_fixed):
+def get_optimizer_and_scheduler(optim_name, net, max_epochs, lr, keep_pretrained_fixed=False, scaledLR=False, inverted_decay=False):
     if keep_pretrained_fixed:
-        params = net.get_trainable_params
+        params = list(net.get_trainable_params())
+    elif scaledLR:
+        new_params = list(net.get_trainable_params())
+        old_params = [p for p in net.parameters() if p not in new_params]
+        params = [{'params': old_params, "lr": 1},
+                  {'params': new_params, 'lr': 10}]
     else:
-        params = net.parameters
-    print("Number of trainable group of params %d:" % sum(1 for x in params()))
+        params = list(net.parameters())
+    print("Number of trainable group of params %d:" % sum(1 for x in params))
     if optim_name == Optimizers.adam.value:
-        optimizer = optim.Adam(params(), lr=lr)
+        optimizer = optim.Adam(params, lr=lr)
         step_down_ratio = 0.8
     elif optim_name == Optimizers.sgd.value:
-        optimizer = optim.SGD(params(), lr=lr, momentum=MOMENTUM, weight_decay=WEIGHT_DECAY, nesterov=NESTEROV)
+        optimizer = optim.SGD(params, lr=lr, momentum=MOMENTUM, weight_decay=WEIGHT_DECAY, nesterov=NESTEROV)
         step_down_ratio = base_step_down_ratio
-    # scheduler = get_scheduler(optimizer, max_epochs, step_down_ratio)
-    scheduler = InvertedLR(optimizer, (10000.0/max_epochs)*0.0003, 0.75, 1) #
+    if inverted_decay:
+        scheduler = InvertedLR(optimizer, (10000.0/max_epochs)*0.0003, 0.75, 1) #
+    else:
+        scheduler = get_scheduler(optimizer, max_epochs, step_down_ratio)
     return optimizer, scheduler
 
 

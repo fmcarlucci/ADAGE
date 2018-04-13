@@ -50,7 +50,7 @@ dataloader_target = get_dataloader(args.target, batch_size, image_size, args.dat
 my_net = get_net(args)
 
 # setup optimizer
-optimizer, scheduler = get_optimizer_and_scheduler(args.optimizer, my_net, args.epochs, args.lr, args.keep_pretrained_fixed)
+optimizer, scheduler = get_optimizer_and_scheduler(args.optimizer, my_net, args.epochs, args.lr, args.keep_pretrained_fixed, args.scaledLr, args.inverted_decay)
 
 if cuda:
     my_net = my_net.cuda()
