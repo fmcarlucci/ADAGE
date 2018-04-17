@@ -35,7 +35,7 @@ def get_dataset(name, image_size, mode="train"):
 
 
 def get_subdataset(name, image_size, mode="train"):
-    img_transform = get_transform(image_size, mode)
+    img_transform = get_transform(image_size, mode, name)
     dataset = load_dataset(img_transform, name)
     LsetT = 9000
     indices = torch.randperm(len(dataset))
