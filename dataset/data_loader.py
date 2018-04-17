@@ -31,9 +31,6 @@ def get_images_for_conversion(folder_path, image_size=228):
 def get_dataset(name, image_size, mode="train", limit=None):
     img_transform = get_transform(image_size, mode, name)
     dataset = load_dataset(img_transform, name, limit)
-    if limit:
-        indices = torch.randperm(len(dataset))
-        dataset = Subset(dataset, indices[0:limit])
     return dataset
 
 
@@ -107,7 +104,10 @@ def load_dataset(img_transform, dataset_name, limit=None):
     elif dataset_name == webcam:
         dataset = datasets.ImageFolder('dataset/webcam', transform=img_transform)
     elif type(dataset_name) is list:
-        return ConcatDataset([load_dataset(img_transform, dset) for dset in dataset_name], limit)
+        return ConcatDataset([load_dataset(img_transform, dset) for dset in dataset_name])
+    if limit:
+        indices = torch.randperm(len(dataset))
+        dataset = Subset(dataset, indices[0:limit])
     return RgbWrapper(dataset)
 
 
@@ -215,14 +215,7 @@ class Subset(torch.utils.data.Dataset):
 
 
 class ConcatDataset(torch.utils.data.Dataset):
-    def __init__(self, datasets, limit):
-        if limit:
-            Lset = limit  # to replicate the multisource setting of https://arxiv.org/pdf/1705.09684.pdf
-            for k in range(len(datasets)):
-                dset = datasets[k]
-                indices = torch.randperm(len(dset))
-                dset = Subset(dset, indices[0:Lset])
-                datasets[k] = dset
+    def __init__(self, datasets):
         self.datasets = datasets
 
     def __getitem__(self, i):
