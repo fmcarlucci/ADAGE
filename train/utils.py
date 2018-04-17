@@ -28,6 +28,8 @@ def get_args():
     parser.add_argument('--source', default=[data_loader.mnist], choices=data_loader.dataset_list, nargs='+')
     parser.add_argument('--target', default=data_loader.mnist_m, choices=data_loader.dataset_list)
     parser.add_argument('--n_classes', default=10, type=int)
+    parser.add_argument('--target_limit', type=int, default=None, help="Number of max samples in target")
+    parser.add_argument('--source_limit', type=int, default=None, help="Number of max samples in each source")
     # losses
     parser.add_argument('--DANN_weight', default=1.0, type=float)
     parser.add_argument('--entropy_loss_weight', default=0.0, type=float, help="Entropy loss on target, default is 0")
@@ -57,6 +59,10 @@ def get_args():
 def get_name(args, seed):
     name = "%s_lr:%g_BS:%d_eps:%d_IS:%d_DW:%g_DA%s" % (args.optimizer, args.lr, args.batch_size, args.epochs,
                                                        args.image_size, args.DANN_weight, args.data_aug_mode)
+    if args.source_limit:
+        name += "_sL%d" % args.source_limit
+    if args.target_limit:
+        name += "_tL%d" % args.target_limit
     if args.keep_pretrained_fixed:
         name += "_freezeNet"
     if args.entropy_loss_weight > 0.0:

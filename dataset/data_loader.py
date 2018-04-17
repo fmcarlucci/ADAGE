@@ -28,19 +28,12 @@ def get_images_for_conversion(folder_path, image_size=228):
     return ImageFolderWithPath(folder_path, transform=img_transform)
 
 
-def get_dataset(name, image_size, mode="train"):
+def get_dataset(name, image_size, mode="train", limit=None):
     img_transform = get_transform(image_size, mode, name)
-    dataset = load_dataset(img_transform, name)
-    return dataset
-
-
-def get_subdataset(name, image_size, mode="train"):
-    img_transform = get_transform(image_size, mode, name)
-    dataset = load_dataset(img_transform, name)
-    LsetT = 9000
-    indices = torch.randperm(len(dataset))
-    dataset = Subset(dataset, indices[0:LsetT])
-
+    dataset = load_dataset(img_transform, name, limit)
+    if limit:
+        indices = torch.randperm(len(dataset))
+        dataset = Subset(dataset, indices[0:limit])
     return dataset
 
 
@@ -81,7 +74,7 @@ def get_transform(image_size, mode, name):
     return img_transform
 
 
-def load_dataset(img_transform, dataset_name):
+def load_dataset(img_transform, dataset_name, limit=None):
     if dataset_name == mnist:
         dataset = datasets.MNIST(
             root=mnist_image_root,
@@ -114,7 +107,7 @@ def load_dataset(img_transform, dataset_name):
     elif dataset_name == webcam:
         dataset = datasets.ImageFolder('dataset/webcam', transform=img_transform)
     elif type(dataset_name) is list:
-        return ConcatDataset([load_dataset(img_transform, dset) for dset in dataset_name])
+        return ConcatDataset([load_dataset(img_transform, dset) for dset in dataset_name], limit)
     return RgbWrapper(dataset)
 
 
@@ -179,18 +172,9 @@ class GetSynthDigits(data.Dataset):
         return len(self.data)
 
 
-def get_dataloader(dataset_name, batch_size, image_size, mode):
+def get_dataloader(dataset_name, batch_size, image_size, mode, limit):
     return torch.utils.data.DataLoader(
-        dataset=get_dataset(dataset_name, image_size, mode),
-        batch_size=batch_size,
-        shuffle=True,
-        drop_last=True,
-        num_workers=4)
-
-
-def get_subdataloader(dataset_name, batch_size, image_size, mode):
-    return torch.utils.data.DataLoader(
-        dataset=get_subdataset(dataset_name, image_size, mode),
+        dataset=get_dataset(dataset_name, image_size, mode, limit),
         batch_size=batch_size,
         shuffle=True,
         drop_last=True,
@@ -231,14 +215,14 @@ class Subset(torch.utils.data.Dataset):
 
 
 class ConcatDataset(torch.utils.data.Dataset):
-    def __init__(self, datasets):
-        Lset = 20000  # to replicate the multisource setting of https://arxiv.org/pdf/1705.09684.pdf
-        for k in range(len(datasets)):
-            dset = datasets[k]
-            indices = torch.randperm(len(dset))
-            dset = Subset(dset, indices[0:Lset])
-            datasets[k] = dset
-        # pdb.set_trace()
+    def __init__(self, datasets, limit):
+        if limit:
+            Lset = limit  # to replicate the multisource setting of https://arxiv.org/pdf/1705.09684.pdf
+            for k in range(len(datasets)):
+                dset = datasets[k]
+                indices = torch.randperm(len(dset))
+                dset = Subset(dset, indices[0:Lset])
+                datasets[k] = dset
         self.datasets = datasets
 
     def __getitem__(self, i):

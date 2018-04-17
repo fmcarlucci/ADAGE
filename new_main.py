@@ -43,17 +43,15 @@ random.seed(manual_seed)
 torch.manual_seed(manual_seed)
 
 args.domain_classes = 1 + len(args.source)
-dataloader_source = get_dataloader(args.source, batch_size, image_size, args.data_aug_mode)
-if len(args.source) > 1:
-   dataloader_target = get_subdataloader(args.target, batch_size, image_size, args.data_aug_mode)
-else:
-   dataloader_target = get_dataloader(args.target, batch_size, image_size, args.data_aug_mode)
+dataloader_source = get_dataloader(args.source, batch_size, image_size, args.data_aug_mode, args.source_limit)
+dataloader_target = get_dataloader(args.target, batch_size, image_size, args.data_aug_mode, args.target_limit)
 
 # load model
 my_net = get_net(args)
 
 # setup optimizer
-optimizer, scheduler = get_optimizer_and_scheduler(args.optimizer, my_net, args.epochs, args.lr, args.keep_pretrained_fixed)
+optimizer, scheduler = get_optimizer_and_scheduler(args.optimizer, my_net, args.epochs, args.lr,
+                                                   args.keep_pretrained_fixed)
 
 if cuda:
     my_net = my_net.cuda()
