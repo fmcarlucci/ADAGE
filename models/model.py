@@ -620,6 +620,7 @@ class AlexNetNoBottleneck(BigDecoDANN):
 classifier_list = {"roided_lenet": CNNModel,
                    "mnist": MnistModel,
                    "svhn": SVHNModel,
+                   "multi": MultisourceModel,
                    "alexnet": AlexNet,
                    "alexnet_no_bottleneck": AlexNetNoBottleneck,
                    "caffenet": CaffeNet,
