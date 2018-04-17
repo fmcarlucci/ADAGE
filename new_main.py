@@ -4,7 +4,7 @@ import time
 import torch.backends.cudnn as cudnn
 import torch.utils.data
 
-from dataset.data_loader import get_dataloader, get_subdataloader
+from dataset.data_loader import get_dataloader
 from logger import Logger
 from models.model import get_net
 from test import test
