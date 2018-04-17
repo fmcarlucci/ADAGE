@@ -206,9 +206,10 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
             # training model using target data
             model.set_deco_mode("target")
             t_img, _ = data_target_iter.next()
-            entropy_target, err_t_domain = compute_batch_loss(cuda, lambda_val, model, t_img, None, 0)
-            loss = entropy_weight * entropy_target * lambda_val + dann_weight * err_t_domain
+            entropy_target, target_domain_loss = compute_batch_loss(cuda, lambda_val, model, t_img, None, 0)
+            loss = entropy_weight * entropy_target * lambda_val + dann_weight * target_domain_loss
             loss.backward()
+            err_t_domain = target_domain_loss.data.cpu().numpy()
 
         # err = dann_weight * err_t_domain + dann_weight * err_s_domain + err_s_label + entropy_weight * entropy_target * lambda_val
         optimizer.step()
@@ -241,7 +242,7 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
             logger.scalar_summary("loss/entropy_target", entropy_target, absolute_iter_count)
             print('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \
                   % (epoch, batch_idx, len_dataloader, err_s_label,
-                     err_s_domain, err_t_domain.cpu().data.numpy()))
+                     err_s_domain, err_t_domain))
         batch_idx += 1
 
 
