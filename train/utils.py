@@ -201,6 +201,7 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
         err_s_domain = err_s_domain / num_source_domains
 
         entropy_target = 0
+        err_t_domain = 0
         if generalize is False:
             # training model using target data
             model.set_deco_mode("target")
