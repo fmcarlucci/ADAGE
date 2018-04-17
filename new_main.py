@@ -65,7 +65,7 @@ for epoch in range(n_epoch):
     scheduler.step()
     logger.scalar_summary("aux/lr", scheduler.get_lr()[0], epoch)
     train_epoch(epoch, dataloader_source, dataloader_target, optimizer, my_net, logger, n_epoch, cuda, dann_weight,
-                entropy_weight, scheduler)
+                entropy_weight, scheduler, args.generalization)
     my_net.set_deco_mode("source")
     for source in source_dataset_names:
         s_acc = test(source, epoch, my_net, image_size, test_batch_size)

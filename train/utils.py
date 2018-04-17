@@ -53,6 +53,7 @@ def get_args():
     parser.add_argument('--suffix', help="Will be added to end of name", default="")
     parser.add_argument('--classifier', default=None, choices=classifier_list.keys())
     parser.add_argument('--tmp_log', action="store_true", help="If set, logger will save to /tmp instead")
+    parser.add_argument('--generalization', action="store_true", help="If set, the target will not be used during training")
     return parser.parse_args()
 
 
@@ -85,6 +86,8 @@ def get_name(args, seed):
         name += "_vanilla"
     if args.classifier:
         name += "_" + args.classifier
+    if args.generalization:
+        name += "_generalization"
     if args.suffix:
         name += "_" + args.suffix
     return name + "_%d" % (seed)
@@ -165,7 +168,7 @@ def pretrain_deco(num_epochs, dataloader_source, dataloader_target, model, logge
 
 
 def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, logger, n_epoch, cuda,
-                dann_weight, entropy_weight, scheduler):
+                dann_weight, entropy_weight, scheduler, generalize):
     model.train()
     len_dataloader = min(len(dataloader_source), len(dataloader_target))
     data_sources_iter = iter(dataloader_source)
@@ -197,12 +200,14 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
         err_s_label = err_s_label / num_source_domains
         err_s_domain = err_s_domain / num_source_domains
 
-        # training model using target data
-        model.set_deco_mode("target")
-        t_img, _ = data_target_iter.next()
-        entropy_target, err_t_domain = compute_batch_loss(cuda, lambda_val, model, t_img, None, 0)
-        loss = entropy_weight * entropy_target * lambda_val + dann_weight * err_t_domain
-        loss.backward()
+        entropy_target = 0
+        if generalize is False:
+            # training model using target data
+            model.set_deco_mode("target")
+            t_img, _ = data_target_iter.next()
+            entropy_target, err_t_domain = compute_batch_loss(cuda, lambda_val, model, t_img, None, 0)
+            loss = entropy_weight * entropy_target * lambda_val + dann_weight * err_t_domain
+            loss.backward()
 
         # err = dann_weight * err_t_domain + dann_weight * err_s_domain + err_s_label + entropy_weight * entropy_target * lambda_val
         optimizer.step()
