@@ -45,6 +45,7 @@ torch.manual_seed(manual_seed)
 args.domain_classes = 1 + len(args.source)
 dataloader_source = get_dataloader(args.source, batch_size, image_size, args.data_aug_mode, args.source_limit)
 dataloader_target = get_dataloader(args.target, batch_size, image_size, args.data_aug_mode, args.target_limit)
+print("Len source %d, len target %d" % (len(dataloader_source), len(dataloader_target)))
 
 # load model
 my_net = get_net(args)
