@@ -216,18 +216,21 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
         # logging stuff
         if batch_idx is 0:
             source_images = Variable(s_img[:9], volatile=True).cuda()
-            target_images = Variable(t_img[:9], volatile=True).cuda()
+            if generalize is False:
+                target_images = Variable(t_img[:9], volatile=True).cuda()
             if isinstance(model, Combo):
                 model.set_deco_mode("source")
                 source_images = model.deco(source_images)
                 model.set_deco_mode("target")
-                target_images = model.deco(target_images)
+                if generalize is False:
+                    target_images = model.deco(target_images)
                 for name, deco in model.get_decos():
                     logger.scalar_summary("aux/%s/deco_to_image_ratio" % name, deco.ratio.data.cpu()[0], epoch)
                     logger.scalar_summary("aux/%s/deco_weight" % name, deco.deco_weight.data.cpu()[0], epoch)
                     logger.scalar_summary("aux/%s/image_weight" % name, deco.image_weight.data.cpu()[0], epoch)
             logger.image_summary("images/source", to_grid(to_np(source_images)), epoch)
-            logger.image_summary("images/target", to_grid(to_np(target_images)), epoch)
+            if generalize is False:
+                logger.image_summary("images/target", to_grid(to_np(target_images)), epoch)
             logger.scalar_summary("aux/p", p, epoch)
             logger.scalar_summary("aux/lambda", lambda_val, epoch)
 
