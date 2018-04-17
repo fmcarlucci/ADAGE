@@ -104,7 +104,7 @@ def load_dataset(img_transform, dataset_name, limit=None):
     elif dataset_name == webcam:
         dataset = datasets.ImageFolder('dataset/webcam', transform=img_transform)
     elif type(dataset_name) is list:
-        return ConcatDataset([load_dataset(img_transform, dset) for dset in dataset_name])
+        return ConcatDataset([load_dataset(img_transform, dset, limit) for dset in dataset_name])
     if limit:
         indices = torch.randperm(len(dataset))
         dataset = Subset(dataset, indices[0:limit])
