@@ -476,6 +476,7 @@ class MultisourceModel(BasicDANN):
             nn.Linear(1024, n_classes)
         )
         self.domain_classifier = nn.Sequential(
+            Flatten(),
             nn.Linear(256 * 4 * 4, 2048),
             nn.ReLU(True),
             nn.Linear(2048, 2048),
