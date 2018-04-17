@@ -44,7 +44,7 @@ torch.manual_seed(manual_seed)
 
 args.domain_classes = 1 + len(args.source)
 dataloader_source = get_dataloader(args.source, batch_size, image_size, args.data_aug_mode)
-if type(args.source) is list:
+if len(args.source) > 1:
    dataloader_target = get_subdataloader(args.target, batch_size, image_size, args.data_aug_mode)
 else:
    dataloader_target = get_dataloader(args.target, batch_size, image_size, args.data_aug_mode)
