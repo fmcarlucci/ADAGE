@@ -33,8 +33,8 @@ def get_optimizer_and_scheduler(optim_name, net, max_epochs, lr, keep_pretrained
     elif optim_name == Optimizers.sgd.value:
         optimizer = optim.SGD(params(), lr=lr, momentum=MOMENTUM, weight_decay=WEIGHT_DECAY, nesterov=NESTEROV)
         step_down_ratio = base_step_down_ratio
-    # scheduler = get_scheduler(optimizer, max_epochs, step_down_ratio)
-    scheduler = InvertedLR(optimizer, (10000.0/max_epochs)*0.0003, 0.75, 1) #
+    scheduler = get_scheduler(optimizer, max_epochs, step_down_ratio)
+    # scheduler = InvertedLR(optimizer, (10000.0/max_epochs)*0.0003, 0.75, 1) # TODO: add option to enable it on demand
     return optimizer, scheduler
 
 

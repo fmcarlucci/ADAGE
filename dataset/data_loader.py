@@ -34,6 +34,16 @@ def get_dataset(name, image_size, mode="train"):
     return dataset
 
 
+def get_subdataset(name, image_size, mode="train"):
+    img_transform = get_transform(image_size, mode)
+    dataset = load_dataset(img_transform, name)
+    LsetT = 9000
+    indices = torch.randperm(len(dataset))
+    dataset = Subset(dataset, indices[0:LsetT])
+
+    return dataset
+
+
 def get_transform(image_size, mode, name):
     if mode == "train":
         img_transform = transforms.Compose([
@@ -178,6 +188,15 @@ def get_dataloader(dataset_name, batch_size, image_size, mode):
         num_workers=4)
 
 
+def get_subdataloader(dataset_name, batch_size, image_size, mode):
+    return torch.utils.data.DataLoader(
+        dataset=get_subdataset(dataset_name, image_size, mode),
+        batch_size=batch_size,
+        shuffle=True,
+        drop_last=True,
+        num_workers=4)
+
+
 class RgbWrapper(torch.utils.data.Dataset):
     def __init__(self, dataset):
         self.dataset = dataset
@@ -199,8 +218,27 @@ class ImageFolderWithPath(ImageFolder):
         return img, path
 
 
+class Subset(torch.utils.data.Dataset):
+    def __init__(self, dataset, indices):
+        self.dataset = dataset
+        self.indices = indices
+
+    def __getitem__(self, idx):
+        return self.dataset[self.indices[idx]]
+
+    def __len__(self):
+        return len(self.indices)
+
+
 class ConcatDataset(torch.utils.data.Dataset):
     def __init__(self, datasets):
+        Lset = 20000  # to replicate the multisource setting of https://arxiv.org/pdf/1705.09684.pdf
+        for k in range(len(datasets)):
+            dset = datasets[k]
+            indices = torch.randperm(len(dset))
+            dset = Subset(dset, indices[0:Lset])
+            datasets[k] = dset
+        # pdb.set_trace()
         self.datasets = datasets
 
     def __getitem__(self, i):

@@ -4,7 +4,7 @@ import time
 import torch.backends.cudnn as cudnn
 import torch.utils.data
 
-from dataset.data_loader import get_dataloader
+from dataset.data_loader import get_dataloader, get_subdataloader
 from logger import Logger
 from models.model import get_net
 from test import test
@@ -44,7 +44,10 @@ torch.manual_seed(manual_seed)
 
 args.domain_classes = 1 + len(args.source)
 dataloader_source = get_dataloader(args.source, batch_size, image_size, args.data_aug_mode)
-dataloader_target = get_dataloader(args.target, batch_size, image_size, args.data_aug_mode)
+if type(args.source) is list:
+   dataloader_target = get_subdataloader(args.target, batch_size, image_size, args.data_aug_mode)
+else:
+   dataloader_target = get_dataloader(args.target, batch_size, image_size, args.data_aug_mode)
 
 # load model
 my_net = get_net(args)

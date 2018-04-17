@@ -336,7 +336,8 @@ class BasicDANN(nn.Module):
 
     def forward(self, input_data, lambda_val):
         feature = self.features(input_data)
-        feature = feature.view(input_data.shape[0], -1)
+        if not isinstance(self, MultisourceModel):
+            feature = feature.view(input_data.shape[0], -1)
         reverse_feature = ReverseLayerF.apply(feature, lambda_val)
         class_output = self.class_classifier(feature)
         domain_output = self.domain_classifier(reverse_feature)
@@ -447,6 +448,39 @@ class SVHNModel(BasicDANN):
             nn.Dropout(0.5, True),
             nn.ReLU(True),
             nn.Linear(2048, n_classes)
+        )
+
+
+class MultisourceModel(BasicDANN):
+    def __init__(self, domain_classes, n_classes):
+        super(MultisourceModel, self).__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 64, 3, padding=1),
+            nn.ReLU(True),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(64, 128, 3, padding=2),
+            nn.ReLU(True),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(128, 256, 3, padding=1),
+            nn.ReLU(True),
+            nn.MaxPool2d(2, 2)
+        )
+        self.class_classifier = nn.Sequential(
+            nn.Conv2d(256, 256, 3, padding=1),
+            nn.ReLU(True),
+            Flatten(),
+            nn.Linear(256 * 4 * 4, 2048),
+            nn.ReLU(True),
+            nn.Linear(2048, 1024),
+            nn.ReLU(True),
+            nn.Linear(1024, n_classes)
+        )
+        self.domain_classifier = nn.Sequential(
+            nn.Linear(256 * 4 * 4, 2048),
+            nn.ReLU(True),
+            nn.Linear(2048, 2048),
+            nn.ReLU(True),
+            nn.Linear(2048, domain_classes)
         )
 
 
