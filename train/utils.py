@@ -22,8 +22,6 @@ def get_args():
     parser.add_argument('--batch_size', default=128, type=int)
     parser.add_argument('--epochs', default=100, type=int)
     parser.add_argument('--keep_pretrained_fixed', action="store_true")
-    parser.add_argument('--scaledLr', action="store_true")
-    parser.add_argument('--inverted_decay', action="store_true", help="If set, will use inverted decay lr scheduling")
     # data
     parser.add_argument('--image_size', type=int, default=28)
     parser.add_argument('--data_aug_mode', default="train", choices=["train", "simple", "office"])
@@ -61,10 +59,6 @@ def get_name(args, seed):
                                                        args.image_size, args.DANN_weight, args.data_aug_mode)
     if args.keep_pretrained_fixed:
         name += "_freezeNet"
-    elif args.scaledLr:
-        name += "_scaledLR"
-    if args.inverted_decay:
-        name += "_invDec"
     if args.entropy_loss_weight > 0.0:
         name += "_entropy:%g" % args.entropy_loss_weight
     if args.use_deco:
@@ -119,7 +113,7 @@ def do_pretraining(num_epochs, dataloader_source, dataloader_target, model, logg
 
 
 def pretrain_deco(num_epochs, dataloader_source, dataloader_target, model, logger, mode):
-    optimizer, scheduler = get_optimizer_and_scheduler(Optimizers.adam.value, model, num_epochs, 0.001)
+    optimizer, scheduler = get_optimizer_and_scheduler(Optimizers.adam.value, model, num_epochs, 0.001, False)
     loss_f = nn.MSELoss().cuda()
     for epoch in range(num_epochs):
         model.train()
