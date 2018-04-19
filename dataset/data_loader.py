@@ -71,6 +71,7 @@ def get_transform(image_size, mode, name):
     return img_transform
 
 
+index_cache = {}
 def load_dataset(img_transform, dataset_name, limit=None):
     if dataset_name == mnist:
         dataset = datasets.MNIST(
@@ -106,8 +107,11 @@ def load_dataset(img_transform, dataset_name, limit=None):
     elif type(dataset_name) is list:
         return ConcatDataset([load_dataset(img_transform, dset, limit) for dset in dataset_name])
     if limit:
-        indices = torch.randperm(len(dataset))
-        dataset = Subset(dataset, indices[0:limit])
+        indices = index_cache.get((dataset_name, limit), None)
+        if indices is None:
+            indices = torch.randperm(len(dataset))[:limit]
+        index_cache[(dataset_name, limit)] = indices
+        dataset = Subset(dataset, indices)
     return RgbWrapper(dataset)
 
 
