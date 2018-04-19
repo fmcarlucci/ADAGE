@@ -12,6 +12,7 @@ from dataset import data_loader
 from models.model import entropy_loss, Combo, deco_types, classifier_list, deco_modes
 from train.optim import optimizer_list, Optimizers, get_optimizer_and_scheduler
 import itertools
+import random
 
 
 def get_args():
@@ -53,7 +54,8 @@ def get_args():
     parser.add_argument('--suffix', help="Will be added to end of name", default="")
     parser.add_argument('--classifier', default=None, choices=classifier_list.keys())
     parser.add_argument('--tmp_log', action="store_true", help="If set, logger will save to /tmp instead")
-    parser.add_argument('--generalization', action="store_true", help="If set, the target will not be used during training")
+    parser.add_argument('--generalization', action="store_true",
+                        help="If set, the target will not be used during training")
     return parser.parse_args()
 
 
@@ -178,7 +180,7 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
     while batch_idx < len_dataloader:
         try:
             scheduler.step_iter()
-        except:
+        except AttributeError:
             pass
         absolute_iter_count = batch_idx + epoch * len_dataloader
         p = float(absolute_iter_count) / n_epoch / len_dataloader
@@ -216,38 +218,49 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
         optimizer.zero_grad()
 
         # logging stuff
-        if batch_idx is 0:
-            source_images = Variable(s_img[:9], volatile=True).cuda()
-            if generalize is False:
-                target_images = Variable(t_img[:9], volatile=True).cuda()
-            if isinstance(model, Combo):
-                model.set_deco_mode("source")
-                source_images = model.deco(source_images)
-                model.set_deco_mode("target")
-                if generalize is False:
-                    target_images = model.deco(target_images)
-                for name, deco in model.get_decos():
-                    logger.scalar_summary("aux/%s/deco_to_image_ratio" % name, deco.ratio.data.cpu()[0], epoch)
-                    logger.scalar_summary("aux/%s/deco_weight" % name, deco.deco_weight.data.cpu()[0], epoch)
-                    logger.scalar_summary("aux/%s/image_weight" % name, deco.image_weight.data.cpu()[0], epoch)
-            logger.image_summary("images/source", to_grid(to_np(source_images)), epoch)
-            if generalize is False:
-                logger.image_summary("images/target", to_grid(to_np(target_images)), epoch)
-            logger.scalar_summary("aux/p", p, epoch)
-            logger.scalar_summary("aux/lambda", lambda_val, epoch)
-
         if (batch_idx % (len_dataloader / 2 + 1)) == 0:
             logger.scalar_summary("loss/source", err_s_label, absolute_iter_count)
             logger.scalar_summary("loss/domain", (err_s_domain + err_t_domain) / 2, absolute_iter_count)
             logger.scalar_summary("loss/entropy_target", entropy_target, absolute_iter_count)
             print('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \
-                  % (epoch, batch_idx, len_dataloader, err_s_label,
-                     err_s_domain, err_t_domain))
+                  % (epoch, batch_idx, len_dataloader, err_s_label, err_s_domain, err_t_domain))
         batch_idx += 1
 
+    # at then end of one training epoch, save statistics and images
+    if isinstance(model, Combo):
+        # get target images
+        target_images = random_items(iter(dataloader_target))[0][0]
+        target_images = Variable(target_images[:9], volatile=True).cuda()
+        model.set_deco_mode("target")
+        target_images = model.deco(target_images)
+        logger.image_summary("images/target", to_grid(to_np(target_images)), epoch)
+        sources = random_items(iter(dataloader_source))[0]
+        model.set_deco_mode("source")
+        for n, (s_img, _) in enumerate(sources):
+            source_images = Variable(s_img[:9], volatile=True).cuda()
+            source_images = model.deco(source_images)
+            logger.image_summary("images/source_%d" % n, to_grid(to_np(source_images)), epoch)
+        for name, deco in model.get_decos():
+            logger.scalar_summary("aux/%s/deco_to_image_ratio" % name, deco.ratio.data.cpu()[0], epoch)
+            logger.scalar_summary("aux/%s/deco_weight" % name, deco.deco_weight.data.cpu()[0], epoch)
+            logger.scalar_summary("aux/%s/image_weight" % name, deco.image_weight.data.cpu()[0], epoch)
 
-def compute_reconstruction_loss(input_image, model):
-    loss = F.binary_cross_entropy(size_average=False)
+    logger.scalar_summary("aux/p", p, epoch)
+    logger.scalar_summary("aux/lambda", lambda_val, epoch)
+
+
+# from https://code.activestate.com/recipes/426332-picking-random-items-from-an-iterator/
+def random_items(iterable, k=1):
+    result = [None] * k
+    for i, item in enumerate(iterable):
+        if i < k:
+            result[i] = item
+        else:
+            j = int(random.random() * (i + 1))
+            if j < k:
+                result[j] = item
+    random.shuffle(result)
+    return result
 
 
 def compute_batch_loss(cuda, lambda_val, model, img, label, domain_label):

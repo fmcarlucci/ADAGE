@@ -6,25 +6,35 @@ from torchvision import transforms
 from dataset.data_loader import GetLoader, get_dataset, dataset_list
 from torchvision import datasets
 
+cache = {}
 
-def test(dataset_name, epoch, model, image_size, batch_size=1024):
+
+def get_dataloader(dataset_name, image_size, limit, batch_size):
+    dataloader = cache.get(dataset_name, None)
+    if dataloader is None:
+        dataloader = torch.utils.data.DataLoader(
+            dataset=get_dataset(dataset_name, image_size, mode="test", limit=limit),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=4,
+            pin_memory=True
+        )
+        cache[dataset_name] = dataloader
+    return dataloader
+
+
+def test(dataset_name, epoch, model, image_size, batch_size=1024, limit=None):
     assert dataset_name in dataset_list
     model.eval()
     cuda = True
     cudnn.benchmark = True
     lambda_val = 0
 
-    dataloader = torch.utils.data.DataLoader(
-        dataset=get_dataset(dataset_name, image_size, mode="test"),
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=4
-    )
-
     n_total = 0.0
     n_correct = 0.0
 
     model.train(False)
+    dataloader = get_dataloader(dataset_name, image_size, limit, batch_size)
     for i, (t_img, t_label) in enumerate(dataloader):
         batch_size = len(t_label)
         if cuda:
@@ -38,5 +48,5 @@ def test(dataset_name, epoch, model, image_size, batch_size=1024):
 
     accu = n_correct / n_total
 
-    print('epoch: %d, accuracy of the %s dataset: %f' % (epoch, dataset_name, accu))
+    print('epoch: %d, accuracy of the %s dataset (%d batches): %f' % (epoch, dataset_name, len(dataloader), accu))
     return accu

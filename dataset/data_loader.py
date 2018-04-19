@@ -178,7 +178,8 @@ def get_dataloader(dataset_name, batch_size, image_size, mode, limit):
         batch_size=batch_size,
         shuffle=True,
         drop_last=True,
-        num_workers=4)
+        num_workers=4,
+        pin_memory=True)
 
 
 class RgbWrapper(torch.utils.data.Dataset):
