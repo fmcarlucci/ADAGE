@@ -192,27 +192,33 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
         err_s_domain = 0.0
         num_source_domains = len(data_sources_batch)
         model.set_deco_mode("source")
+        source_domain_losses = []
+        source_target_similarity = []
         for v, source_data in enumerate(data_sources_batch):
             s_img, s_label = source_data
-            class_loss, domain_loss = compute_batch_loss(cuda, lambda_val, model, s_img, s_label, v + 1)
+            class_loss, domain_loss, target_similarity = compute_batch_loss(cuda, lambda_val, model, s_img, s_label, v + 1)
             loss = class_loss + dann_weight * domain_loss
             loss.backward()
             # used for logging only
             err_s_label += class_loss.data.cpu().numpy()
+            source_domain_losses.append(domain_loss.data.cpu().numpy())
+            source_target_similarity.append(target_similarity)
             err_s_domain += domain_loss.data.cpu().numpy()
         err_s_label = err_s_label / num_source_domains
         err_s_domain = err_s_domain / num_source_domains
 
         entropy_target = 0
         err_t_domain = 0
+        domain_error = err_s_domain
         if generalize is False:
             # training model using target data
             model.set_deco_mode("target")
             t_img, _ = data_target_iter.next()
-            entropy_target, target_domain_loss = compute_batch_loss(cuda, lambda_val, model, t_img, None, 0)
+            entropy_target, target_domain_loss, _ = compute_batch_loss(cuda, lambda_val, model, t_img, None, 0)
             loss = entropy_weight * entropy_target * lambda_val + dann_weight * target_domain_loss
             loss.backward()
             err_t_domain = target_domain_loss.data.cpu().numpy()
+            domain_error = (err_s_domain + err_t_domain) / 2
 
         # err = dann_weight * err_t_domain + dann_weight * err_s_domain + err_s_label + entropy_weight * entropy_target * lambda_val
         optimizer.step()
@@ -221,7 +227,11 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
         # logging stuff
         if (batch_idx % (len_dataloader / 2 + 1)) == 0:
             logger.scalar_summary("loss/source", err_s_label, absolute_iter_count)
-            logger.scalar_summary("loss/domain", (err_s_domain + err_t_domain) / 2, absolute_iter_count)
+            logger.scalar_summary("loss/domain", domain_error, absolute_iter_count)
+            for k, val in enumerate(source_domain_losses):
+                logger.scalar_summary("loss/domain_s%d" % k, val, absolute_iter_count)
+            for k, val in enumerate(source_target_similarity):
+                logger.scalar_summary("similarity/prob/%d" % k, val, absolute_iter_count)
             logger.scalar_summary("loss/entropy_target", entropy_target, absolute_iter_count)
             print('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \
                   % (epoch, batch_idx, len_dataloader, err_s_label, err_s_domain, err_t_domain))
@@ -276,5 +286,7 @@ def compute_batch_loss(cuda, lambda_val, model, img, label, domain_label):
         class_loss = F.cross_entropy(class_output, Variable(label))
     else:
         class_loss = entropy_loss(class_output)
+
     domain_loss = F.cross_entropy(domain_output, Variable(domain_label))
-    return class_loss, domain_loss
+    target_similarity = (F.softmax(domain_output, 1)[:,0].mean()).data.cpu().numpy()
+    return class_loss, domain_loss, target_similarity
