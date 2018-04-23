@@ -9,7 +9,7 @@ from logger import Logger
 from models.model import get_net
 from test import test
 from train.optim import get_optimizer_and_scheduler
-from train.utils import get_name, get_folder_name, ensure_dir, train_epoch, get_args, do_pretraining
+from train.utils import get_name, get_folder_name, ensure_dir, train_epoch, get_args, do_pretraining, simple_tuned
 
 args = get_args()
 print(args)
@@ -61,7 +61,7 @@ if args.deco_pretrain > 0:
     do_pretraining(args.deco_pretrain, dataloader_source, dataloader_target, my_net, logger)
 start = time.time()
 # training
-if args.data_aug_mode == "simple_tuned":
+if args.data_aug_mode == simple_tuned:
     tune_stats = True
 else:
     tune_stats = False

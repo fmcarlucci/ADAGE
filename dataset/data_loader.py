@@ -8,6 +8,8 @@ from torchvision import datasets
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 
+from train.utils import simple_tuned
+
 mnist = 'mnist'
 mnist_m = 'mnist_m'
 svhn = 'svhn'
@@ -67,7 +69,7 @@ def get_transform(image_size, mode, name):
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         ])
-    elif mode == "simple-tuned":
+    elif mode == simple_tuned:
         img_transform = transforms.Compose([
             transforms.RandomResizedCrop(image_size, scale=(0.9, 1.0)),
             transforms.ToTensor(),

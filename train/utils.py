@@ -14,6 +14,8 @@ from train.optim import optimizer_list, Optimizers, get_optimizer_and_scheduler
 import itertools
 import random
 
+simple_tuned = "simple-tuned"
+
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -25,7 +27,7 @@ def get_args():
     parser.add_argument('--keep_pretrained_fixed', action="store_true")
     # data
     parser.add_argument('--image_size', type=int, default=28)
-    parser.add_argument('--data_aug_mode', default="train", choices=["train", "simple", "office"])
+    parser.add_argument('--data_aug_mode', default="train", choices=["train", "simple", simple_tuned, "office"])
     parser.add_argument('--source', default=[data_loader.mnist], choices=data_loader.dataset_list, nargs='+')
     parser.add_argument('--target', default=data_loader.mnist_m, choices=data_loader.dataset_list)
     parser.add_argument('--n_classes', default=10, type=int)
