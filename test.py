@@ -9,11 +9,15 @@ from torchvision import datasets
 cache = {}
 
 
-def get_dataloader(dataset_name, image_size, limit, batch_size):
+def get_dataloader(dataset_name, image_size, limit, batch_size, tune_stats=False):
     dataloader = cache.get(dataset_name, None)
+    if tune_stats:
+        mode = "test_tuned"
+    else:
+        mode = "test"
     if dataloader is None:
         dataloader = torch.utils.data.DataLoader(
-            dataset=get_dataset(dataset_name, image_size, mode="test", limit=limit),
+            dataset=get_dataset(dataset_name, image_size, mode=mode, limit=limit),
             batch_size=batch_size,
             shuffle=False,
             num_workers=4,
@@ -23,7 +27,7 @@ def get_dataloader(dataset_name, image_size, limit, batch_size):
     return dataloader
 
 
-def test(dataset_name, epoch, model, image_size, batch_size=1024, limit=None):
+def test(dataset_name, epoch, model, image_size, batch_size=1024, limit=None, tune_stats=False):
     assert dataset_name in dataset_list
     model.eval()
     cuda = True
@@ -34,7 +38,7 @@ def test(dataset_name, epoch, model, image_size, batch_size=1024, limit=None):
     n_correct = 0.0
 
     model.train(False)
-    dataloader = get_dataloader(dataset_name, image_size, limit, batch_size)
+    dataloader = get_dataloader(dataset_name, image_size, limit, batch_size, tune_stats=tune_stats)
     for i, (t_img, t_label) in enumerate(dataloader):
         batch_size = len(t_label)
         if cuda:

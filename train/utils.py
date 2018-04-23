@@ -170,14 +170,14 @@ def pretrain_deco(num_epochs, dataloader_source, dataloader_target, model, logge
 
 
 def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, logger, n_epoch, cuda,
-                dann_weight, entropy_weight, scheduler, generalize):
+                dann_weight, entropy_weight, scheduler, generalize, weight_sources=False):
     model.train()
     len_dataloader = min(len(dataloader_source), len(dataloader_target))
     data_sources_iter = iter(dataloader_source)
     data_target_iter = iter(dataloader_target)
 
     batch_idx = 0
-    #TODO count epochs on source
+    # TODO count epochs on source
     while batch_idx < len_dataloader:
         try:
             scheduler.step_iter()
@@ -197,6 +197,8 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
         for v, source_data in enumerate(data_sources_batch):
             s_img, s_label = source_data
             class_loss, domain_loss, target_similarity = compute_batch_loss(cuda, lambda_val, model, s_img, s_label, v + 1)
+            if weight_sources:
+                class_loss = class_loss * torch.from_numpy(len(data_sources_batch) * target_similarity)
             loss = class_loss + dann_weight * domain_loss
             loss.backward()
             # used for logging only
@@ -288,5 +290,5 @@ def compute_batch_loss(cuda, lambda_val, model, img, label, domain_label):
         class_loss = entropy_loss(class_output)
 
     domain_loss = F.cross_entropy(domain_output, Variable(domain_label))
-    target_similarity = (F.softmax(domain_output, 1)[:,0].mean()).data.cpu().numpy()
+    target_similarity = (F.softmax(domain_output, 1)[:, 0].mean()).data.cpu().numpy()
     return class_loss, domain_loss, target_similarity

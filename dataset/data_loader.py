@@ -22,6 +22,16 @@ synth_image_root = os.path.join('dataset', 'SynthDigits')
 office_list = [amazon, webcam, dslr]
 dataset_list = [mnist, mnist_m, svhn, synth] + office_list
 
+dataset_std = {mnist: [0.30280363, 0.30280363, 0.30280363],
+               mnist_m: [0.2384788, 0.22375608, 0.24496263],
+               svhn: [0.1951134, 0.19804622, 0.19481073],
+               synth: [0.29410212, 0.2939651,  0.29404707]}
+
+dataset_mean = {mnist: [0.13909429, 0.13909429, 0.13909429],
+                mnist_m: [0.45920207, 0.46326601, 0.41085603],
+                svhn: [0.43744073, 0.4437959, 0.4733686],
+                synth: [0.46332872, 0.46316052, 0.46327512]}
+
 
 def get_images_for_conversion(folder_path, image_size=228):
     img_transform = get_transform(image_size, "test", None)
@@ -35,7 +45,7 @@ def get_dataset(name, image_size, mode="train", limit=None):
 
 
 def get_transform(image_size, mode, name):
-    #TODO use dataset specific mean and std
+    # TODO use dataset specific mean and std
     if mode == "train":
         img_transform = transforms.Compose([
             transforms.RandomResizedCrop(image_size, scale=(0.5, 1.0)),
@@ -57,6 +67,17 @@ def get_transform(image_size, mode, name):
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         ])
+    elif mode == "simple-tuned":
+        img_transform = transforms.Compose([
+            transforms.RandomResizedCrop(image_size, scale=(0.9, 1.0)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=dataset_mean[name], std=dataset_std[name])
+        ])
+    elif mode == "simple-no-norm":
+        img_transform = transforms.Compose([
+            transforms.RandomResizedCrop(image_size, scale=(0.9, 1.0)),
+            transforms.ToTensor()
+        ])
     elif mode == "test":
         if name in office_list:
             mean = [0.485, 0.456, 0.406]
@@ -69,10 +90,18 @@ def get_transform(image_size, mode, name):
             transforms.ToTensor(),
             transforms.Normalize(mean=mean, std=std)
         ])
+    elif mode == "test-tuned":
+        img_transform = transforms.Compose([
+            transforms.Resize(image_size),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=dataset_mean[name], std=dataset_std[name])
+        ])
     return img_transform
 
 
 index_cache = {}
+
+
 def load_dataset(img_transform, dataset_name, limit=None):
     if dataset_name == mnist:
         dataset = datasets.MNIST(
