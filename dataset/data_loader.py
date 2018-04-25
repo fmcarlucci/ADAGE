@@ -1,4 +1,6 @@
 import os
+import gzip
+import pickle
 
 import numpy as np
 import torch.utils
@@ -14,15 +16,19 @@ mnist = 'mnist'
 mnist_m = 'mnist_m'
 svhn = 'svhn'
 synth = 'synth'
+usps = 'usps'
+
 webcam = "webcam"
 amazon = "amazon"
 dslr = "dslr"
+
 mnist_image_root = os.path.join('dataset', 'mnist')
 mnist_m_image_root = os.path.join('dataset', 'mnist_m')
 synth_image_root = os.path.join('dataset', 'SynthDigits')
+usps_image_root = os.path.join('dataset', 'usps')
 
 office_list = [amazon, webcam, dslr]
-dataset_list = [mnist, mnist_m, svhn, synth] + office_list
+dataset_list = [mnist, mnist_m, svhn, synth, usps] + office_list
 
 dataset_std = {mnist: (0.30280363, 0.30280363, 0.30280363),
                mnist_m: (0.2384788, 0.22375608, 0.24496263),
@@ -130,6 +136,13 @@ def load_dataset(img_transform, dataset_name, limit=None):
             data_mat=train_mat,
             transform=img_transform
         )
+    elif dataset_name == usps:
+        data_file = "usps_28x28.pkl"
+        dataset = GetUSPS(
+            data_root=usps_image_root,
+            data_file = data_file, 
+            transform=img_transform
+        )
     elif dataset_name == amazon:
         dataset = datasets.ImageFolder('dataset/amazon', transform=img_transform)
     elif dataset_name == dslr:
@@ -207,7 +220,52 @@ class GetSynthDigits(data.Dataset):
     def __len__(self):
         return len(self.data)
 
+class GetUSPS(data.Dataset):
+    def __init__(self, data_root, data_file, transform=None):
+        import ipdb; ipdb.set_trace()
+        self.root = data_root
+        self.filename = data_file
+        # Num of Train = 7438, Num ot Test 1860
+        self.transform = transform
+        self.dataset_size = None
+        self.data, self.labels = self.load_samples()
 
+        total_num_samples = self.labels.shape[0]
+        indices = np.arange(total_num_samples)
+        np.random.shuffle(indices)
+        self.data = self.data[indices[0:self.dataset_size], ::]
+        self.labels = self.labels[indices[0:self.dataset_size]]
+        self.data *= 255.0
+        self.data = self.data.transpose((0, 2, 3, 1)) # convert to HWC
+
+    def __getitem__(self, index):
+        img, label = self.data[index, ::], self.labels[index]
+        if self.transform is not None:
+            img = self.transform(img)
+        label = torch.LongTensor([np.int64(label).item()])
+        # label = torch.FloatTensor([label.item()])
+        return img, label
+
+    def load_samples(self):
+        """Load sample images from dataset."""
+        filename = os.path.join(self.root, self.filename)
+        f = gzip.open(filename, "rb")
+        data_set = pickle.load(f, encoding="bytes")
+        f.close()
+        images_train = data_set[0][0]
+        images_test  = data_set[1][0]
+        images = np.concatenate((images_train, images_test), axis=0)
+        labels_train = data_set[0][1]
+        labels_test = data_set[1][1]
+        labels = np.concatenate((labels_train, labels_test), axis=0)
+        self.dataset_size = labels.shape[0]
+        return images, labels
+
+    def __len__(self):
+        """Return size of dataset."""
+        return self.dataset_size
+
+            
 def get_dataloader(dataset_name, batch_size, image_size, mode, limit):
     return torch.utils.data.DataLoader(
         dataset=get_dataset(dataset_name, image_size, mode, limit),
