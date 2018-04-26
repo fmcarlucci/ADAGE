@@ -170,7 +170,6 @@ def pretrain_deco(num_epochs, dataloader_source, dataloader_target, model, logge
         logger.scalar_summary("reconstruction/%s/source" % mode, source_loss, epoch)
         logger.scalar_summary("reconstruction/%s/target" % mode, target_loss, epoch)
 
-multisource_hack = [1.3, 0.7, 0,7]
 def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, logger, n_epoch, cuda,
                 dann_weight, entropy_weight, scheduler, generalize, weight_sources=False):
     model.train()
@@ -202,7 +201,7 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
             class_loss, domain_loss, target_similarity = compute_batch_loss(cuda, lambda_val, model, s_img, s_label, v + 1)
             if weight_sources:
                 class_loss = class_loss * torch.from_numpy(len(data_sources_batch) * target_similarity)
-            loss = multisource_hack[v] * class_loss + dann_weight * domain_loss
+            loss = class_loss + dann_weight * domain_loss
             loss.backward()
             # used for logging only
             err_s_label += class_loss.data.cpu().numpy()
