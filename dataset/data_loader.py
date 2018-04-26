@@ -210,7 +210,6 @@ class GetSynthDigits(data.Dataset):
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image
         img = Image.fromarray(np.transpose(img, (1, 2, 0)))
-
         if self.transform is not None:
             img = self.transform(img)
             labels = int(labels)
@@ -222,7 +221,6 @@ class GetSynthDigits(data.Dataset):
 
 class GetUSPS(data.Dataset):
     def __init__(self, data_root, data_file, transform=None):
-        import ipdb; ipdb.set_trace()
         self.root = data_root
         self.filename = data_file
         # Num of Train = 7438, Num ot Test 1860
@@ -234,17 +232,19 @@ class GetUSPS(data.Dataset):
         indices = np.arange(total_num_samples)
         np.random.shuffle(indices)
         self.data = self.data[indices[0:self.dataset_size], ::]
-        self.labels = self.labels[indices[0:self.dataset_size]]
+        self.labels = self.labels[indices[0:self.dataset_size]].astype(np.int64).squeeze()
         self.data *= 255.0
+        self.data = np.repeat(self.data.astype("uint8"), 3, axis=1) 
         self.data = self.data.transpose((0, 2, 3, 1)) # convert to HWC
-
+        
     def __getitem__(self, index):
-        img, label = self.data[index, ::], self.labels[index]
+        img, labels = self.data[index, ::], self.labels[index]
+        img = Image.fromarray(img)
         if self.transform is not None:
             img = self.transform(img)
-        label = torch.LongTensor([np.int64(label).item()])
+            labels = int(labels)
         # label = torch.FloatTensor([label.item()])
-        return img, label
+        return img, labels
 
     def load_samples(self):
         """Load sample images from dataset."""

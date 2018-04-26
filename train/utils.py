@@ -188,7 +188,6 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
         absolute_iter_count = batch_idx + epoch * len_dataloader
         p = float(absolute_iter_count) / n_epoch / len_dataloader
         lambda_val = 2. / (1. + np.exp(-10 * p)) - 1
-        import ipdb; ipdb.set_trace()
         data_sources_batch = data_sources_iter.next()
         # process source datasets (can be multiple)
         err_s_label = 0.0
