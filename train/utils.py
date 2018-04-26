@@ -62,7 +62,7 @@ def get_args():
 
 
 def get_name(args, seed):
-    name = "%s_lr:%g_BS:%d_eps:%d_IS:%d_DW:%g_DA%s" % (args.optimizer, args.lr, args.batch_size, args.epochs,
+    name = "oct_%s_lr:%g_BS:%d_eps:%d_IS:%d_DW:%g_DA%s" % (args.optimizer, args.lr, args.batch_size, args.epochs,
                                                        args.image_size, args.DANN_weight, args.data_aug_mode)
     if args.source_limit:
         name += "_sL%d" % args.source_limit
