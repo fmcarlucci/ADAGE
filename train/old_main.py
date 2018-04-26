@@ -10,8 +10,7 @@ from dataset import data_loader
 from dataset.data_loader import get_dataset
 
 from logger import Logger
-from models.model import Combo
-from models.large_models import CNNModel
+from models.model import Combo, CNNModel
 import numpy as np
 from test import test
 import time
