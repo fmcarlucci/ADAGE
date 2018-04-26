@@ -16,6 +16,7 @@ MOMENTUM = 0.9
 class Optimizers(Enum):
     adam = "adam"
     sgd = "sgd"
+    rmsprop = "rms_prop"
 
 
 optimizer_list = [v.value for v in Optimizers]
@@ -29,6 +30,9 @@ def get_optimizer_and_scheduler(optim_name, net, max_epochs, lr, keep_pretrained
     print("Number of trainable group of params %d:" % sum(1 for x in params()))
     if optim_name == Optimizers.adam.value:
         optimizer = optim.Adam(params(), lr=lr)
+        step_down_ratio = 0.8
+    elif optim_name == Optimizers.rmsprop.value:
+        optimizer = optim.RMSprop(params(), lr=lr)
         step_down_ratio = 0.8
     elif optim_name == Optimizers.sgd.value:
         optimizer = optim.SGD(params(), lr=lr, momentum=MOMENTUM, weight_decay=WEIGHT_DECAY, nesterov=NESTEROV)
