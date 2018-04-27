@@ -9,8 +9,6 @@ from torch.nn import Parameter
 from torchvision.models.resnet import BasicBlock, Bottleneck
 import torch.nn.functional as func
 
-from models.large_models import DECO, BigDecoDANN, ResNet50, AlexNet, SmallAlexNet, CaffeNet, \
-    AlexNetNoBottleneck
 from models.torch_future import Flatten
 
 image_weight = 1.0
@@ -94,6 +92,7 @@ class Combo(nn.Module):
     def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
         super(Combo, self).__init__()
         self.net = get_classifier(classifier, domain_classes, n_classes)
+        from models.large_models import SmallAlexNet, BigDecoDANN, DECO
         if isinstance(self.net, SmallAlexNet):
             self.deco_architecture = DECO_mini
         elif isinstance(self.net, BigDecoDANN):
@@ -471,6 +470,7 @@ class CNNModel(BasicDANN):
         return class_output, domain_output
 
 
+from models.large_models import DECO, BigDecoDANN, ResNet50, AlexNet, SmallAlexNet, CaffeNet, AlexNetNoBottleneck
 classifier_list = {"roided_lenet": CNNModel,
                    "mnist": MnistModel,
                    "svhn": SVHNModel,
@@ -480,3 +480,4 @@ classifier_list = {"roided_lenet": CNNModel,
                    "caffenet": CaffeNet,
                    "small_alexnet": SmallAlexNet,
                    "resnet50": ResNet50}
+

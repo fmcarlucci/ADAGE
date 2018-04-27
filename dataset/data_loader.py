@@ -98,6 +98,8 @@ def get_dataset(dataset_name, image_size, mode="train", limit=None):
 
 
 def get_transform(image_size, mode, name):
+    if isinstance(name, list):
+        return None
     # TODO use dataset specific mean and std
     if mode == "train":
         img_transform = transforms.Compose([
