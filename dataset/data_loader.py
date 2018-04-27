@@ -33,7 +33,7 @@ dataset_list = [mnist, mnist_m, svhn, synth, usps] + office_list
 dataset_std = {mnist: (0.30280363, 0.30280363, 0.30280363),
                mnist_m: (0.2384788, 0.22375608, 0.24496263),
                svhn: (0.1951134, 0.19804622, 0.19481073),
-               synth: (0.29410212, 0.2939651,  0.29404707)}
+               synth: (0.29410212, 0.2939651, 0.29404707)}
 
 dataset_mean = {mnist: (0.13909429, 0.13909429, 0.13909429),
                 mnist_m: (0.45920207, 0.46326601, 0.41085603),
@@ -46,10 +46,55 @@ def get_images_for_conversion(folder_path, image_size=228):
     return ImageFolderWithPath(folder_path, transform=img_transform)
 
 
-def get_dataset(name, image_size, mode="train", limit=None):
-    img_transform = get_transform(image_size, mode, name)
-    dataset = load_dataset(img_transform, name, limit)
-    return dataset
+def get_dataset(dataset_name, image_size, mode="train", limit=None):
+    img_transform = get_transform(image_size, mode, dataset_name)
+    if dataset_name == mnist:
+        dataset = datasets.MNIST(
+            root=mnist_image_root,
+            train=True,
+            transform=img_transform, download=True
+        )
+    elif dataset_name == svhn:
+        dataset = datasets.SVHN(
+            root=os.path.join('dataset', 'svhn'),
+            transform=img_transform, download=True
+        )
+    elif dataset_name == mnist_m:
+        train_list = os.path.join(mnist_m_image_root, 'mnist_m_train_labels.txt')
+        dataset = GetLoader(
+            data_root=os.path.join(mnist_m_image_root, 'mnist_m_train'),
+            data_list=train_list,
+            transform=img_transform
+        )
+    elif dataset_name == synth:
+        train_mat = os.path.join(synth_image_root, 'synth_train_32x32.mat')
+        dataset = GetSynthDigits(
+            data_root=synth_image_root,
+            data_mat=train_mat,
+            transform=img_transform
+        )
+    elif dataset_name == usps:
+        data_file = "usps_28x28.pkl"
+        dataset = GetUSPS(
+            data_root=usps_image_root,
+            data_file=data_file,
+            transform=img_transform
+        )
+    elif dataset_name == amazon:
+        dataset = datasets.ImageFolder('dataset/amazon', transform=img_transform)
+    elif dataset_name == dslr:
+        dataset = datasets.ImageFolder('dataset/dslr', transform=img_transform)
+    elif dataset_name == webcam:
+        dataset = datasets.ImageFolder('dataset/webcam', transform=img_transform)
+    elif type(dataset_name) is list:
+        return ConcatDataset([get_dataset(dset, image_size, mode, limit) for dset in dataset_name])
+    if limit:
+        indices = index_cache.get((dataset_name, limit), None)
+        if indices is None:
+            indices = torch.randperm(len(dataset))[:limit]
+        index_cache[(dataset_name, limit)] = indices
+        dataset = Subset(dataset, indices)
+    return RgbWrapper(dataset)
 
 
 def get_transform(image_size, mode, name):
@@ -108,57 +153,6 @@ def get_transform(image_size, mode, name):
 
 
 index_cache = {}
-
-
-def load_dataset(img_transform, dataset_name, limit=None):
-    if dataset_name == mnist:
-        dataset = datasets.MNIST(
-            root=mnist_image_root,
-            train=True,
-            transform=img_transform, download=True
-        )
-    elif dataset_name == svhn:
-        dataset = datasets.SVHN(
-            root=os.path.join('dataset', 'svhn'),
-            transform=img_transform, download=True
-        )
-    elif dataset_name == mnist_m:
-        train_list = os.path.join(mnist_m_image_root, 'mnist_m_train_labels.txt')
-        dataset = GetLoader(
-            data_root=os.path.join(mnist_m_image_root, 'mnist_m_train'),
-            data_list=train_list,
-            transform=img_transform
-        )
-    elif dataset_name == synth:
-        train_mat = os.path.join(synth_image_root, 'synth_train_32x32.mat')
-        dataset = GetSynthDigits(
-            data_root=synth_image_root,
-            data_mat=train_mat,
-            transform=img_transform
-        )
-    elif dataset_name == usps:
-        data_file = "usps_28x28.pkl"
-        dataset = GetUSPS(
-            data_root=usps_image_root,
-            data_file = data_file, 
-            transform=img_transform
-        )
-    elif dataset_name == amazon:
-        dataset = datasets.ImageFolder('dataset/amazon', transform=img_transform)
-    elif dataset_name == dslr:
-        dataset = datasets.ImageFolder('dataset/dslr', transform=img_transform)
-    elif dataset_name == webcam:
-        dataset = datasets.ImageFolder('dataset/webcam', transform=img_transform)
-    elif type(dataset_name) is list:
-        return ConcatDataset([load_dataset(img_transform, dset, limit) for dset in dataset_name])
-    if limit:
-        indices = index_cache.get((dataset_name, limit), None)
-        if indices is None:
-            indices = torch.randperm(len(dataset))[:limit]
-        index_cache[(dataset_name, limit)] = indices
-        dataset = Subset(dataset, indices)
-    return RgbWrapper(dataset)
-
 
 class GetLoader(data.Dataset):
     def __init__(self, data_root, data_list, transform=None):
@@ -219,6 +213,7 @@ class GetSynthDigits(data.Dataset):
     def __len__(self):
         return len(self.data)
 
+
 class GetUSPS(data.Dataset):
     def __init__(self, data_root, data_file, transform=None):
         self.root = data_root
@@ -234,9 +229,9 @@ class GetUSPS(data.Dataset):
         self.data = self.data[indices[0:self.dataset_size], ::]
         self.labels = self.labels[indices[0:self.dataset_size]].astype(np.int64).squeeze()
         self.data *= 255.0
-        self.data = np.repeat(self.data.astype("uint8"), 3, axis=1) 
-        self.data = self.data.transpose((0, 2, 3, 1)) # convert to HWC
-        
+        self.data = np.repeat(self.data.astype("uint8"), 3, axis=1)
+        self.data = self.data.transpose((0, 2, 3, 1))  # convert to HWC
+
     def __getitem__(self, index):
         img, labels = self.data[index, ::], self.labels[index]
         img = Image.fromarray(img)
@@ -253,7 +248,7 @@ class GetUSPS(data.Dataset):
         data_set = pickle.load(f, encoding="bytes")
         f.close()
         images_train = data_set[0][0]
-        images_test  = data_set[1][0]
+        images_test = data_set[1][0]
         images = np.concatenate((images_train, images_test), axis=0)
         labels_train = data_set[0][1]
         labels_test = data_set[1][1]
@@ -265,7 +260,7 @@ class GetUSPS(data.Dataset):
         """Return size of dataset."""
         return self.dataset_size
 
-            
+
 def get_dataloader(dataset_name, batch_size, image_size, mode, limit):
     return torch.utils.data.DataLoader(
         dataset=get_dataset(dataset_name, image_size, mode, limit),
