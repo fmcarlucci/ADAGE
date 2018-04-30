@@ -186,6 +186,8 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
     batch_idx = 0
     domain_error = 0
     # TODO count epochs on source
+    past_source_target_similarity = None
+    weight_sources = True
     while batch_idx < len_dataloader:
         try:
             scheduler.step_iter()
@@ -210,8 +212,8 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
             s_img, s_label = source_data
             class_loss, domain_loss, observation_loss, target_similarity = compute_batch_loss(cuda, lambda_val, model,
                                                                                               s_img, s_label, v, num_source_domains)
-            if weight_sources:
-                class_loss = class_loss * torch.from_numpy(len(data_sources_batch) * target_similarity)
+            if weight_sources and past_source_target_similarity is not None:
+                class_loss = class_loss * Variable(torch.from_numpy(len(data_sources_batch) * past_source_target_similarity[v]), requires_grad=True).cuda()
             loss = class_loss + dann_weight * domain_loss + observation_loss
             loss.backward()
             # used for logging only
@@ -220,7 +222,7 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
             observed_domain_losses.append(observation_loss.data.cpu().numpy())
             source_target_similarity.append(target_similarity)
             err_s_domain += domain_loss.data.cpu().numpy()
-        source_target_similarity = softmax_list(source_target_similarity)
+        past_source_target_similarity = softmax_list(source_target_similarity)
         err_s_label = err_s_label / num_source_domains
         err_s_domain = err_s_domain / num_source_domains
 
@@ -250,7 +252,7 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
             logger.scalar_summary("loss/observer_domain", sum(observed_domain_losses) / len(observed_domain_losses), absolute_iter_count)
             for k, val in enumerate(source_domain_losses):
                 logger.scalar_summary("loss/domain_s%d" % k, val, absolute_iter_count)
-            for k, val in enumerate(source_target_similarity):
+            for k, val in enumerate(past_source_target_similarity):
                 logger.scalar_summary("similarity/prob/%d" % k, val, absolute_iter_count)
             logger.scalar_summary("loss/entropy_target", entropy_target, absolute_iter_count)
             print('epoch: %d, [iter: %d / all %d], err_s_label: %f, err_s_domain: %f, err_t_domain: %f' \

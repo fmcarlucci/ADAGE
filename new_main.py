@@ -71,8 +71,6 @@ for epoch in range(n_epoch):
     train_epoch(epoch, dataloader_source, dataloader_target, optimizer, my_net, logger, n_epoch, cuda, dann_weight,
                 entropy_weight, scheduler, args.generalization)
     my_net.set_deco_mode("source")
-    if epoch > 100:
-        import ipdb; ipdb.set_trace()
     for d, source in enumerate(source_dataset_names):
         s_acc = test(source, epoch, my_net, image_size, d, test_batch_size, limit=args.source_limit, tune_stats=tune_stats)
         if len(source_dataset_names) == 1:

@@ -489,18 +489,20 @@ class MultisourceModel(BasicDANN):
             nn.Conv2d(3, 64, 3, padding=1),
             nn.ReLU(True),
             nn.MaxPool2d(2, 2),
-            nn.Conv2d(64, 128, 3, padding=2),
+            nn.Conv2d(64, 64, 3, padding=2),
             nn.ReLU(True),
             nn.MaxPool2d(2, 2),
-            nn.Conv2d(128, 256, 3, padding=1),
+            nn.Conv2d(64, 128, 3, padding=1),
             nn.ReLU(True),
             nn.MaxPool2d(2, 2),
             Flatten(),
-            nn.Linear(256 * 4 * 4, 1024),
+            nn.Linear(128 * 4 * 4, 512),
+            nn.Dropout(),
             nn.ReLU(True),
-            nn.Linear(1024, 1024),
-            nn.ReLU(True),
-            nn.Linear(1024, domain_classes)
+            #nn.Linear(512, 512),
+            #nn.Dropout(),
+            #nn.ReLU(True),
+            nn.Linear(512, domain_classes)
         )
 
     def forward(self, input_data, lambda_val, domain=None):
@@ -508,7 +510,8 @@ class MultisourceModel(BasicDANN):
         reverse_feature = ReverseLayerF.apply(feature, lambda_val)
         class_output = self.class_classifier(feature)
         domain_output = self.domain_classifier(reverse_feature)
-        observation = self.observer(GradientKillerLayer.apply(input_data))
+        #observation = self.observer(GradientKillerLayer.apply(input_data))
+        observation = self.observer(ReverseLayerF.apply(input_data, lambda_val / 10.0))
         return class_output, domain_output, observation
 
 
