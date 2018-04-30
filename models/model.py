@@ -449,7 +449,7 @@ class MultisourceModelWeighted(BasicDANN):
             else:
                 softmax_obs = nn.functional.softmax(observation[:, :-1], 1)
             for k, predictor in enumerate(self.per_domain_classifier):
-                class_output = class_output + predictor(class_features) * Variable(softmax_obs[:, k].mean().data, requires_grad=False)
+                class_output = class_output + nn.functional.softmax(predictor(class_features), 1) * Variable(softmax_obs[:, k].mean().data, requires_grad=False)
         return class_output, domain_output, observation
 
 
