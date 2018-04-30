@@ -71,15 +71,17 @@ for epoch in range(n_epoch):
     train_epoch(epoch, dataloader_source, dataloader_target, optimizer, my_net, logger, n_epoch, cuda, dann_weight,
                 entropy_weight, scheduler, args.generalization)
     my_net.set_deco_mode("source")
-    for source in source_dataset_names:
-        s_acc = test(source, epoch, my_net, image_size, test_batch_size, limit=args.source_limit, tune_stats=tune_stats)
+    if epoch > 100:
+        import ipdb; ipdb.set_trace()
+    for d, source in enumerate(source_dataset_names):
+        s_acc = test(source, epoch, my_net, image_size, d, test_batch_size, limit=args.source_limit, tune_stats=tune_stats)
         if len(source_dataset_names) == 1:
             source_name = "acc/source"
         else:
             source_name = "acc/source_%s" % source
         logger.scalar_summary(source_name, s_acc, epoch)
     my_net.set_deco_mode("target")
-    t_acc = test(target_dataset_name, epoch, my_net, image_size, test_batch_size, limit=args.target_limit, tune_stats=tune_stats)
+    t_acc = test(target_dataset_name, epoch, my_net, image_size, len(args.source), test_batch_size, limit=args.target_limit, tune_stats=tune_stats)
     logger.scalar_summary("acc/target", t_acc, epoch)
 
 save_path = '{}/{}/{}_{}.pth'.format(model_root, folder_name, run_name, epoch)

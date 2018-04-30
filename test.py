@@ -27,7 +27,7 @@ def get_dataloader(dataset_name, image_size, limit, batch_size, tune_stats=False
     return dataloader
 
 
-def test(dataset_name, epoch, model, image_size, batch_size=1024, limit=None, tune_stats=False):
+def test(dataset_name, epoch, model, image_size, domain, batch_size=1024, limit=None, tune_stats=False):
     assert dataset_name in dataset_list
     model.eval()
     cuda = True
@@ -45,7 +45,7 @@ def test(dataset_name, epoch, model, image_size, batch_size=1024, limit=None, tu
             t_img = t_img.cuda()
             t_label = t_label.cuda()
 
-        class_output, _, _ = model(input_data=Variable(t_img, volatile=True), lambda_val=lambda_val)
+        class_output, _, _ = model(input_data=Variable(t_img, volatile=True), lambda_val=lambda_val, domain=domain)
         pred = class_output.data.max(1, keepdim=True)[1]
         n_correct += pred.eq(t_label.view_as(pred)).cpu().sum()
         n_total += batch_size

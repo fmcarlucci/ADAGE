@@ -31,19 +31,20 @@ class DecoArgs:
         self.deconv = args.deco_deconv
 
 
-def get_classifier(name, domain_classes, n_classes):
+def get_classifier(name, domain_classes, n_classes, generalization):
     if name:
-        return classifier_list[name](domain_classes, n_classes)
+        return classifier_list[name](domain_classes, n_classes, generalization)
     return CNNModel(domain_classes, n_classes)
 
 
 def get_net(args):
+    domain_classes = args.domain_classes
     if args.use_deco:
         deco_args = DecoArgs(args)
-        my_net = deco_modes[deco_args.mode](deco_args, classifier=args.classifier, domain_classes=args.domain_classes,
-                                            n_classes=args.n_classes)
+        my_net = deco_modes[deco_args.mode](deco_args, classifier=args.classifier, domain_classes=domain_classes,
+                                            n_classes=args.n_classes, generalization=args.generalization)
     else:
-        my_net = get_classifier(args.classifier, domain_classes=args.domain_classes, n_classes=args.n_classes)
+        my_net = get_classifier(args.classifier, domain_classes=domain_classes, n_classes=args.n_classes, generalization=args.generalization)
 
     for p in my_net.parameters():
         p.requires_grad = True
@@ -89,9 +90,9 @@ class ReverseLayerF(Function):
 
 
 class Combo(nn.Module):
-    def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
+    def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10, generalization=False):
         super(Combo, self).__init__()
-        self.net = get_classifier(classifier, domain_classes, n_classes)
+        self.net = get_classifier(classifier, domain_classes, n_classes, generalization)
         from models.large_models import SmallAlexNet, BigDecoDANN, DECO
         if isinstance(self.net, SmallAlexNet):
             self.deco_architecture = DECO_mini
@@ -103,9 +104,9 @@ class Combo(nn.Module):
     def set_deco_mode(self, mode):
         self.deco = self.domain_transforms[mode]
 
-    def forward(self, input_data, lambda_val):
+    def forward(self, input_data, lambda_val, domain):
         input_data = self.deco(input_data)
-        return self.net(input_data, lambda_val)
+        return self.net(input_data, lambda_val, domain)
 
     def get_trainable_params(self):
         return itertools.chain(self.get_deco_parameters(), self.net.get_trainable_params())
@@ -140,8 +141,8 @@ class SourceOnlyCombo(Combo):
 
 
 class SharedCombo(Combo):
-    def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10):
-        super(SharedCombo, self).__init__(deco_args, classifier, domain_classes, n_classes)
+    def __init__(self, deco_args, classifier, domain_classes=2, n_classes=10, generalization=False):
+        super(SharedCombo, self).__init__(deco_args, classifier, domain_classes, n_classes, generalization)
         self._deconet = self.deco_architecture(deco_args)
         self.domain_transforms = {"source": self._deconet,
                                   "target": self._deconet}
@@ -263,7 +264,7 @@ class DECO_mini(BasicDECO):
         self.bn1 = nn.BatchNorm2d(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.layer1 = self._make_layer(deco_args.block, self.inplanes, deco_args.n_layers)
-        self.conv_out = nn.Conv2d(self.inplanes * deco_args.block.expansion, deco_args.output_channels, 1)
+        self.conv_out = nn.Conv2d(self.inplanes, deco_args.output_channels, 1)
         self.init_weights()
 
     def forward(self, input_data):
@@ -306,10 +307,9 @@ class BasicDANN(nn.Module):
         self.class_classifier = None
         self.observer = PassData()
 
-    def forward(self, input_data, lambda_val):
+    def forward(self, input_data, lambda_val, domain=None):
         feature = self.features(input_data)
-        if not isinstance(self, MultisourceModel):
-            feature = feature.view(input_data.shape[0], -1)
+        feature = feature.view(input_data.shape[0], -1)
         reverse_feature = ReverseLayerF.apply(feature, lambda_val)
         class_output = self.class_classifier(feature)
         domain_output = self.domain_classifier(reverse_feature)
@@ -387,8 +387,74 @@ class SVHNModel(BasicDANN):
         )
 
 
+class MultisourceModelWeighted(BasicDANN):
+    def __init__(self, domain_classes, n_classes, generalization):
+        super(MultisourceModelWeighted, self).__init__()
+        self.domains = domain_classes
+        if generalization:
+            self.domains -= 1
+        self.generalization = generalization
+        self.n_classes = n_classes
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 64, 3, padding=1),
+            nn.ReLU(True),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(64, 128, 3, padding=2),
+            nn.ReLU(True),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(128, 256, 3, padding=1),
+            nn.ReLU(True),
+            nn.MaxPool2d(2, 2)
+        )
+        self.class_classifier = nn.Sequential(
+            nn.Conv2d(256, 256, 3, padding=1),
+            nn.ReLU(True),
+            Flatten(),
+            nn.Linear(256 * 4 * 4, 2048),
+            nn.ReLU(True),
+            nn.Linear(2048, 1024),
+            nn.ReLU(True)
+        )
+        self.per_domain_classifier = nn.ModuleList([nn.Linear(1024, n_classes) for k in range(domain_classes - 1)])
+        self.domain_classifier = nn.Sequential(
+            Flatten(),
+            nn.Linear(256 * 4 * 4, 2048),
+            nn.ReLU(True),
+            nn.Linear(2048, 2048),
+            nn.ReLU(True),
+            nn.Linear(2048, self.domains)
+        )
+        self.observer = nn.Sequential(
+            Flatten(),
+            nn.Linear(256 * 4 * 4, 1024),
+            nn.ReLU(True),
+            nn.Linear(1024, 1024),
+            nn.ReLU(True),
+            nn.Linear(1024, self.domains)
+        )
+
+    def forward(self, input_data, lambda_val, domain):
+        feature = self.features(input_data)
+        reverse_feature = ReverseLayerF.apply(feature, lambda_val)
+        class_features = self.class_classifier(feature)
+        domain_output = self.domain_classifier(reverse_feature)
+        observation = self.observer(GradientKillerLayer.apply(feature))
+        if domain < len(self.per_domain_classifier):  # one of the source domains
+            class_output = self.per_domain_classifier[domain](class_features)
+        else:  # if target domain
+            class_output = Variable(torch.zeros(input_data.shape[0], self.n_classes).cuda())
+
+            if self.generalization:
+                softmax_obs = nn.functional.softmax(observation, 1)
+            else:
+                softmax_obs = nn.functional.softmax(observation[:, :-1], 1)
+            for k, predictor in enumerate(self.per_domain_classifier):
+                class_output = class_output + predictor(class_features) * Variable(softmax_obs[:, k].mean().data, requires_grad=False)
+        return class_output, domain_output, observation
+
+
 class MultisourceModel(BasicDANN):
-    def __init__(self, domain_classes, n_classes):
+    def __init__(self, domain_classes, n_classes, generalization):
         super(MultisourceModel, self).__init__()
         self.features = nn.Sequential(
             nn.Conv2d(3, 64, 3, padding=1),
@@ -420,6 +486,15 @@ class MultisourceModel(BasicDANN):
             nn.Linear(2048, domain_classes)
         )
         self.observer = nn.Sequential(
+            nn.Conv2d(3, 64, 3, padding=1),
+            nn.ReLU(True),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(64, 128, 3, padding=2),
+            nn.ReLU(True),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(128, 256, 3, padding=1),
+            nn.ReLU(True),
+            nn.MaxPool2d(2, 2),
             Flatten(),
             nn.Linear(256 * 4 * 4, 1024),
             nn.ReLU(True),
@@ -427,6 +502,14 @@ class MultisourceModel(BasicDANN):
             nn.ReLU(True),
             nn.Linear(1024, domain_classes)
         )
+
+    def forward(self, input_data, lambda_val, domain=None):
+        feature = self.features(input_data)
+        reverse_feature = ReverseLayerF.apply(feature, lambda_val)
+        class_output = self.class_classifier(feature)
+        domain_output = self.domain_classifier(reverse_feature)
+        observation = self.observer(GradientKillerLayer.apply(input_data))
+        return class_output, domain_output, observation
 
 
 class CNNModel(BasicDANN):
@@ -471,13 +554,14 @@ class CNNModel(BasicDANN):
 
 
 from models.large_models import DECO, BigDecoDANN, ResNet50, AlexNet, SmallAlexNet, CaffeNet, AlexNetNoBottleneck
+
 classifier_list = {"roided_lenet": CNNModel,
                    "mnist": MnistModel,
                    "svhn": SVHNModel,
                    "multi": MultisourceModel,
+                   "multi_weighted": MultisourceModelWeighted,
                    "alexnet": AlexNet,
                    "alexnet_no_bottleneck": AlexNetNoBottleneck,
                    "caffenet": CaffeNet,
                    "small_alexnet": SmallAlexNet,
                    "resnet50": ResNet50}
-

@@ -62,8 +62,8 @@ def get_args():
 
 
 def get_name(args, seed):
-    name = "oct_%s_lr:%g_BS:%d_eps:%d_IS:%d_DW:%g_DA%s" % (args.optimizer, args.lr, args.batch_size, args.epochs,
-                                                           args.image_size, args.DANN_weight, args.data_aug_mode)
+    name = "%s_lr:%g_BS:%d_eps:%d_IS:%d_DW:%g_DA%s" % (args.optimizer, args.lr, args.batch_size, args.epochs,
+                                                       args.image_size, args.DANN_weight, args.data_aug_mode)
     if args.source_limit:
         name += "_sL%d" % args.source_limit
     if args.target_limit:
@@ -171,6 +171,11 @@ def pretrain_deco(num_epochs, dataloader_source, dataloader_target, model, logge
         logger.scalar_summary("reconstruction/%s/target" % mode, target_loss, epoch)
 
 
+def softmax_list(source_target_similarity):
+    total_sum = sum(source_target_similarity)
+    return [v / total_sum for v in source_target_similarity]
+
+
 def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, logger, n_epoch, cuda,
                 dann_weight, entropy_weight, scheduler, generalize, weight_sources=False):
     model.train()
@@ -204,7 +209,7 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
         for v, source_data in enumerate(data_sources_batch):
             s_img, s_label = source_data
             class_loss, domain_loss, observation_loss, target_similarity = compute_batch_loss(cuda, lambda_val, model,
-                                                                                              s_img, s_label, v + 1)
+                                                                                              s_img, s_label, v, num_source_domains)
             if weight_sources:
                 class_loss = class_loss * torch.from_numpy(len(data_sources_batch) * target_similarity)
             loss = class_loss + dann_weight * domain_loss + observation_loss
@@ -215,6 +220,7 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
             observed_domain_losses.append(observation_loss.data.cpu().numpy())
             source_target_similarity.append(target_similarity)
             err_s_domain += domain_loss.data.cpu().numpy()
+        source_target_similarity = softmax_list(source_target_similarity)
         err_s_label = err_s_label / num_source_domains
         err_s_domain = err_s_domain / num_source_domains
 
@@ -225,7 +231,8 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
             # training model using target data
             model.set_deco_mode("target")
             t_img, _ = data_target_iter.next()
-            entropy_target, target_domain_loss, observation_loss, _ = compute_batch_loss(cuda, lambda_val, model, t_img, None, 0)
+            entropy_target, target_domain_loss, observation_loss, _ = compute_batch_loss(cuda, lambda_val, model, t_img, None, num_source_domains,
+                                                                                         num_source_domains)
             loss = entropy_weight * entropy_target * lambda_val + dann_weight * target_domain_loss + observation_loss
             loss.backward()
             err_t_domain = target_domain_loss.data.cpu().numpy()
@@ -240,7 +247,7 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
         if (batch_idx % (len_dataloader / 2 + 1)) == 0:
             logger.scalar_summary("loss/source", err_s_label, absolute_iter_count)
             logger.scalar_summary("loss/domain", domain_error, absolute_iter_count)
-            logger.scalar_summary("loss/observer_domain", sum(observed_domain_losses)/len(observed_domain_losses), absolute_iter_count)
+            logger.scalar_summary("loss/observer_domain", sum(observed_domain_losses) / len(observed_domain_losses), absolute_iter_count)
             for k, val in enumerate(source_domain_losses):
                 logger.scalar_summary("loss/domain_s%d" % k, val, absolute_iter_count)
             for k, val in enumerate(source_target_similarity):
@@ -287,13 +294,13 @@ def random_items(iterable, k=1):
     return result
 
 
-def compute_batch_loss(cuda, lambda_val, model, img, label, domain_label):
-    domain_label = torch.ones(img.shape[0]).long() * domain_label
+def compute_batch_loss(cuda, lambda_val, model, img, label, _domain_label, target_label):
+    domain_label = torch.ones(img.shape[0]).long() * _domain_label
     if cuda:
         img = img.cuda()
         if label is not None: label = label.cuda()
         domain_label = domain_label.cuda()
-    class_output, domain_output, observer_output = model(input_data=Variable(img), lambda_val=lambda_val)
+    class_output, domain_output, observer_output = model(input_data=Variable(img), lambda_val=lambda_val, domain=_domain_label)
     # compute losses
     if label is not None:
         class_loss = F.cross_entropy(class_output, Variable(label))
@@ -302,5 +309,8 @@ def compute_batch_loss(cuda, lambda_val, model, img, label, domain_label):
 
     domain_loss = F.cross_entropy(domain_output, Variable(domain_label))
     observer_loss = F.cross_entropy(observer_output, Variable(domain_label))
-    target_similarity = (F.softmax(observer_output, 1)[:, 0].mean()).data.cpu().numpy()
+    if target_label < observer_output.shape[1]:
+        target_similarity = (F.softmax(observer_output, 1)[:, target_label].mean()).data.cpu().numpy()
+    else:  # generalization
+        target_similarity = 0.0
     return class_loss, domain_loss, observer_loss, target_similarity
