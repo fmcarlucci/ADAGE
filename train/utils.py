@@ -297,6 +297,7 @@ def random_items(iterable, k=1):
 
 
 def compute_batch_loss(cuda, lambda_val, model, img, label, _domain_label, target_label):
+    eps = 1e-4
     domain_label = torch.ones(img.shape[0]).long() * _domain_label
     if cuda:
         img = img.cuda()
