@@ -173,6 +173,8 @@ def pretrain_deco(num_epochs, dataloader_source, dataloader_target, model, logge
 
 def softmax_list(source_target_similarity):
     total_sum = sum(source_target_similarity)
+    if total_sum == 0:
+        total_sum = 1
     return [v / total_sum for v in source_target_similarity]
 
 
@@ -188,6 +190,8 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
     # TODO count epochs on source
     past_source_target_similarity = None
     weight_sources = True
+    if generalize:
+        weight_sources = False
     while batch_idx < len_dataloader:
         try:
             scheduler.step_iter()
