@@ -200,7 +200,7 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
         absolute_iter_count = batch_idx + epoch * len_dataloader
         p = float(absolute_iter_count) / n_epoch / len_dataloader
         lambda_val = 2. / (1. + np.exp(-10 * p)) - 1
-        if domain_error > 3.0:
+        if domain_error > 1.5:
             print("Shutting down DANN gradient to avoid collapse (iter %d)" % absolute_iter_count)
             lambda_val = 0.0
         data_sources_batch = data_sources_iter.next()
