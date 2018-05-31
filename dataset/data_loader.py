@@ -38,13 +38,17 @@ dataset_std = {mnist: (0.30280363, 0.30280363, 0.30280363),
                mnist_m: (0.2384788, 0.22375608, 0.24496263),
                svhn: (0.1951134, 0.19804622, 0.19481073),
                synth: (0.29410212, 0.2939651, 0.29404707),
-               usps: (0.25887518, 0.25887518, 0.25887518)}
+               usps: (0.25887518, 0.25887518, 0.25887518),
+               synth_signs: (0.28315591, 0.2789663, 0.30152685),
+               gtsrb: (0.26750497, 0.2494335,  0.25966593)}
 
 dataset_mean = {mnist: (0.13909429, 0.13909429, 0.13909429),
                 mnist_m: (0.45920207, 0.46326601, 0.41085603),
                 svhn: (0.43744073, 0.4437959, 0.4733686),
                 synth: (0.46332872, 0.46316052, 0.46327512),
-                usps: (0.17025368, 0.17025368, 0.17025368)}
+                usps: (0.17025368, 0.17025368, 0.17025368),
+                synth_signs: (0.43471373, 0.40261434, 0.43641199),
+                gtsrb: (0.36089954, 0.31854348, 0.33791215)}
 
 
 def get_images_for_conversion(folder_path, image_size=228):
@@ -87,9 +91,9 @@ def get_dataset(dataset_name, image_size, mode="train", limit=None):
             transform=img_transform
         )
     elif dataset_name == gtsrb:
-        dataset = GetNumpyDataset(gtsrb_image_root, mode)
+        dataset = GetNumpyDataset(gtsrb_image_root, mode, img_transform)
     elif dataset_name == synth_signs:
-        dataset = GetNumpyDataset(synth_signs_image_root, mode)
+        dataset = GetNumpyDataset(synth_signs_image_root, mode, img_transform)
     elif dataset_name == amazon:
         dataset = datasets.ImageFolder('dataset/amazon', transform=img_transform)
     elif dataset_name == dslr:
@@ -240,7 +244,7 @@ class GetNumpyDataset(data.Dataset):
             train = np.load(self.root + "train_data.npy")
             l_train = np.load(self.root + "train_labels.npy")
             self.data = np.vstack((train, test))
-            self.labels = np.vstack((l_train, l_test))
+            self.labels = np.hstack((l_train, l_test))
 
         self.labels = self.labels.astype(np.int64).squeeze()
 
