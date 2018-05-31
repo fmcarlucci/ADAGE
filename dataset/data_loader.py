@@ -237,7 +237,7 @@ class GetNumpyDataset(data.Dataset):
 
         test = np.load(self.root + "test_data.npy")
         l_test = np.load(self.root + "test_labels.npy")
-        if mode == "test":
+        if mode in ["test", "test-tuned"]:
             self.data = test
             self.labels = l_test
         else:
