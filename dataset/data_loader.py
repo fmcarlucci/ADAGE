@@ -18,6 +18,8 @@ svhn = 'svhn'
 synth = 'synth'
 usps = 'usps'
 
+synth_signs = "synth_signs"
+gtsrb = "gtsrb"
 webcam = "webcam"
 amazon = "amazon"
 dslr = "dslr"
@@ -26,9 +28,11 @@ mnist_image_root = os.path.join('dataset', 'mnist')
 mnist_m_image_root = os.path.join('dataset', 'mnist_m')
 synth_image_root = os.path.join('dataset', 'SynthDigits')
 usps_image_root = os.path.join('dataset', 'usps')
+gtsrb_image_root = os.path.join('dataset', gtsrb, "signs_")
+synth_signs_image_root = os.path.join('dataset', synth_signs, "synth_signs_")
 
 office_list = [amazon, webcam, dslr]
-dataset_list = [mnist, mnist_m, svhn, synth, usps] + office_list
+dataset_list = [mnist, mnist_m, svhn, synth, usps, synth_signs, gtsrb] + office_list
 
 dataset_std = {mnist: (0.30280363, 0.30280363, 0.30280363),
                mnist_m: (0.2384788, 0.22375608, 0.24496263),
@@ -82,6 +86,10 @@ def get_dataset(dataset_name, image_size, mode="train", limit=None):
             data_file=data_file,
             transform=img_transform
         )
+    elif dataset_name == gtsrb:
+        dataset = GetNumpyDataset(gtsrb_image_root, mode)
+    elif dataset_name == synth_signs:
+        dataset = GetNumpyDataset(synth_signs_image_root, mode)
     elif dataset_name == amazon:
         dataset = datasets.ImageFolder('dataset/amazon', transform=img_transform)
     elif dataset_name == dslr:
@@ -202,6 +210,39 @@ class GetSynthDigits(data.Dataset):
         self.data = loaded_mat['X']
         self.data = np.transpose(self.data, (3, 2, 0, 1))
         self.labels = loaded_mat['y'].astype(np.int64).squeeze()
+
+    def __getitem__(self, item):
+        img, labels = self.data[item], self.labels[item]
+        # doing this so that it is consistent with all other datasets
+        # to return a PIL Image
+        img = Image.fromarray(np.transpose(img, (1, 2, 0)))
+        if self.transform is not None:
+            img = self.transform(img)
+            labels = int(labels)
+
+        return img, labels
+
+    def __len__(self):
+        return len(self.data)
+
+
+class GetNumpyDataset(data.Dataset):
+    def __init__(self, data_root, mode, transform=None):
+        self.root = data_root
+        self.transform = transform
+
+        test = np.load(self.root + "test_data.npy")
+        l_test = np.load(self.root + "test_labels.npy")
+        if mode == "test":
+            self.data = test
+            self.labels = l_test
+        else:
+            train = np.load(self.root + "train_data.npy")
+            l_train = np.load(self.root + "train_labels.npy")
+            self.data = np.vstack((train, test))
+            self.labels = np.vstack((l_train, l_test))
+
+        self.labels = self.labels.astype(np.int64).squeeze()
 
     def __getitem__(self, item):
         img, labels = self.data[item], self.labels[item]
