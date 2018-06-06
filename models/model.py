@@ -4,7 +4,7 @@ import itertools
 import torch
 import torch.nn as nn
 from torch import nn as nn
-from torch.autograd import Function, Variable
+from torch.autograd import Function
 from torch.nn import Parameter
 from torchvision.models.resnet import BasicBlock, Bottleneck, conv3x3
 import torch.nn.functional as func
@@ -286,11 +286,11 @@ class BasicDECO(nn.Module):
         if self.deco_args.train_deco_weight:
             self.deco_weight = Parameter(torch.FloatTensor(1), requires_grad=True)
         else:
-            self.deco_weight = Variable(torch.FloatTensor(1)).cuda()
+            self.deco_weight = torch.FloatTensor(1).cuda()
         if self.deco_args.train_image_weight:
             self.image_weight = Parameter(torch.FloatTensor(1), requires_grad=True)
         else:
-            self.image_weight = Variable(torch.FloatTensor(1)).cuda()
+            self.image_weight = torch.FloatTensor(1).cuda()
         self.deco_weight.data.fill_(deco_args.deco_weight)
         self.image_weight.data.fill_(image_weight)
         self.use_tanh = deco_args.use_tanh
@@ -521,14 +521,14 @@ class MultisourceModelWeighted(BasicDANN):
         if domain < len(self.per_domain_classifier):  # one of the source domains
             class_output = self.per_domain_classifier[domain](class_features)
         else:  # if target domain
-            class_output = Variable(torch.zeros(input_data.shape[0], self.n_classes).cuda())
+            class_output = torch.zeros(input_data.shape[0], self.n_classes).cuda()
 
             if self.generalization:
                 softmax_obs = nn.functional.softmax(observation, 1)
             else:
                 softmax_obs = nn.functional.softmax(observation[:, :-1], 1)
             for k, predictor in enumerate(self.per_domain_classifier):
-                class_output = class_output + nn.functional.softmax(predictor(class_features), 1) * Variable(softmax_obs[:, k].mean().data, requires_grad=False)
+                class_output = class_output + nn.functional.softmax(predictor(class_features), 1) * softmax_obs[:, k].mean().detach()
         return class_output, domain_output, observation
 
 
