@@ -269,12 +269,14 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
         target_images = random_items(iter(dataloader_target))[0][0]
         target_images = Variable(target_images[:9], volatile=True).cuda()
         model.set_deco_mode("target")
+        logger.image_summary("original/target", to_grid(to_np(target_images)), epoch)
         target_images = model.deco(target_images)
         logger.image_summary("images/target", to_grid(to_np(target_images)), epoch)
         sources = random_items(iter(dataloader_source))[0]
         model.set_deco_mode("source")
         for n, (s_img, _) in enumerate(sources):
             source_images = Variable(s_img[:9], volatile=True).cuda()
+            logger.image_summary("original/source_%d" % n, to_grid(to_np(source_images)), epoch)
             source_images = model.deco(source_images)
             logger.image_summary("images/source_%d" % n, to_grid(to_np(source_images)), epoch)
         for name, deco in model.get_decos():

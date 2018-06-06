@@ -117,10 +117,11 @@ def get_transform(image_size, mode, name):
     # TODO use dataset specific mean and std
     if mode == "train":
         img_transform = transforms.Compose([
-            transforms.RandomResizedCrop(image_size, scale=(0.5, 1.0)),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.5, hue=0.5),
+            transforms.RandomAffine(15, shear=15),
+            transforms.RandomResizedCrop(image_size, scale=(0.9, 1.0)),
             transforms.ToTensor(),
-            transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+            transforms.Normalize(mean=dataset_mean[name], std=dataset_std[name])
         ])
     elif mode == "office":
         img_transform = transforms.Compose([
@@ -157,7 +158,7 @@ def get_transform(image_size, mode, name):
         img_transform = transforms.Compose([
             transforms.Resize(image_size),
             transforms.ToTensor(),
-            transforms.Normalize(mean=mean, std=std)
+            transforms.Normalize(mean=dataset_mean[name], std=dataset_std[name])
         ])
     elif mode == "test-tuned":
         img_transform = transforms.Compose([
