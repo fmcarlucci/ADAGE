@@ -217,7 +217,7 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
             class_loss, domain_loss, observation_loss, target_similarity = compute_batch_loss(cuda, lambda_val, model,
                                                                                               s_img, s_label, v, num_source_domains)
             if weight_sources and past_source_target_similarity is not None:
-                class_loss = class_loss * torch.from_numpy(len(data_sources_batch) * past_source_target_similarity[v]).cuda()
+                class_loss = class_loss * (torch.tensor(len(data_sources_batch)) * past_source_target_similarity[v]).float().cuda()
             loss = class_loss + dann_weight * domain_loss + observation_loss
             loss.backward()
             # used for logging only
@@ -281,9 +281,9 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
                 source_images = model.deco(source_images)
                 logger.image_summary("images/source_%d" % n, to_grid(to_np(source_images)), epoch)
             for name, deco in model.get_decos():
-                logger.scalar_summary("aux/%s/deco_to_image_ratio" % name, deco.ratio.data.cpu()[0], epoch)
-                logger.scalar_summary("aux/%s/deco_weight" % name, deco.deco_weight.data.cpu()[0], epoch)
-                logger.scalar_summary("aux/%s/image_weight" % name, deco.image_weight.data.cpu()[0], epoch)
+                logger.scalar_summary("aux/%s/deco_to_image_ratio" % name, deco.ratio.item(), epoch)
+                logger.scalar_summary("aux/%s/deco_weight" % name, deco.deco_weight.item(), epoch)
+                logger.scalar_summary("aux/%s/image_weight" % name, deco.image_weight.item(), epoch)
 
     logger.scalar_summary("aux/p", p, epoch)
     logger.scalar_summary("aux/lambda", lambda_val, epoch)

@@ -23,6 +23,12 @@ gtsrb = "gtsrb"
 webcam = "webcam"
 amazon = "amazon"
 dslr = "dslr"
+eth80_p00 = "eth80-p-000"
+eth80_p22 = "eth80-p-022"
+eth80_p45 = "eth80-p-045"
+eth80_p68 = "eth80-p-068"
+eth80_p90 = "eth80-p-090"
+eth_list = [eth80_p00, eth80_p22, eth80_p45, eth80_p68, eth80_p90]
 
 mnist_image_root = os.path.join('dataset', 'mnist')
 mnist_m_image_root = os.path.join('dataset', 'mnist_m')
@@ -32,7 +38,7 @@ gtsrb_image_root = os.path.join('dataset', gtsrb, "signs_")
 synth_signs_image_root = os.path.join('dataset', synth_signs, "synth_signs_")
 
 office_list = [amazon, webcam, dslr]
-dataset_list = [mnist, mnist_m, svhn, synth, usps, synth_signs, gtsrb] + office_list
+dataset_list = [mnist, mnist_m, svhn, synth, usps, synth_signs, gtsrb] + office_list + eth_list
 
 dataset_std = {mnist: (0.30280363, 0.30280363, 0.30280363),
                mnist_m: (0.2384788, 0.22375608, 0.24496263),
@@ -100,6 +106,8 @@ def get_dataset(dataset_name, image_size, mode="train", limit=None):
         dataset = datasets.ImageFolder('dataset/dslr', transform=img_transform)
     elif dataset_name == webcam:
         dataset = datasets.ImageFolder('dataset/webcam', transform=img_transform)
+    elif dataset_name in eth_list:
+        dataset = datasets.ImageFolder('dataset/' + dataset_name, transform=img_transform)
     elif type(dataset_name) is list:
         return ConcatDataset([get_dataset(dset, image_size, mode, limit) for dset in dataset_name])
     if limit:
