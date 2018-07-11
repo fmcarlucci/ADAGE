@@ -6,6 +6,7 @@ import os
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+from torchvision.utils import make_grid
 
 from dataset import data_loader
 from models.model import entropy_loss, Combo, deco_types, classifier_list, deco_modes
@@ -57,7 +58,9 @@ def get_args():
     parser.add_argument('--tmp_log', action="store_true", help="If set, logger will save to /tmp instead")
     parser.add_argument('--generalization', action="store_true",
                         help="If set, the target will not be used during training")
-    return parser.parse_args()
+    args = parser.parse_args()
+    args.source = sorted(args.source)
+    return args
 
 
 def get_name(args, seed):
@@ -101,11 +104,15 @@ def to_np(x):
 
 
 def to_grid(x):
-    channels = x.shape[1]
-    s = x.shape[2]
-    y = x.swapaxes(1, 3).reshape(3, s * 3, s, channels).swapaxes(1, 2).reshape(s * 3, s * 3, channels).squeeze()[
-        np.newaxis, ...]
-    return y
+    y = make_grid(x, nrow=3, padding=1, normalize=False, range=None, scale_each=False, pad_value=0)
+    # import ipdb; ipdb.set_trace()
+    tmp = y.cpu().numpy().swapaxes(0,1).swapaxes(1,2)
+    return tmp[np.newaxis, ...]
+    # channels = x.shape[1]
+    # s = x.shape[2]
+    # y = x.swapaxes(1, 3).reshape(3, s * 3, s, channels).swapaxes(1, 2).reshape(s * 3, s * 3, channels).squeeze()[
+    #     np.newaxis, ...]
+    # return y
 
 
 def get_folder_name(source, target):
@@ -163,8 +170,8 @@ def pretrain_deco(num_epochs, dataloader_source, dataloader_target, model, logge
                     target_images = target_image[:9].cuda()
                     source_images = model(source_images)
                     target_images = model(target_images)
-                    logger.image_summary("reconstruction/%s/source" % mode, to_grid(to_np(source_images)), epoch)
-                    logger.image_summary("reconstruction/%s/target" % mode, to_grid(to_np(target_images)), epoch)
+                    logger.image_summary("reconstruction/%s/source" % mode, to_grid(source_images), epoch)
+                    logger.image_summary("reconstruction/%s/target" % mode, to_grid(target_images), epoch)
 
         print("%d/%d - Reconstruction loss source: %g, target %g" % (epoch, num_epochs, source_loss, target_loss))
         logger.scalar_summary("reconstruction/%s/source" % mode, source_loss, epoch)
@@ -200,7 +207,7 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
         absolute_iter_count = batch_idx + epoch * len_dataloader
         p = float(absolute_iter_count) / n_epoch / len_dataloader
         lambda_val = 2. / (1. + np.exp(-10 * p)) - 1
-        if domain_error > 1.5:
+        if domain_error > 3.0:
             print("Shutting down DANN gradient to avoid collapse (iter %d)" % absolute_iter_count)
             lambda_val = 0.0
         data_sources_batch = data_sources_iter.next()
@@ -270,16 +277,16 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
             target_images = random_items(iter(dataloader_target))[0][0]
             target_images = target_images[:9].cuda()
             model.set_deco_mode("target")
-            logger.image_summary("original/target", to_grid(to_np(target_images)), epoch)
+            logger.image_summary("original/target", to_grid(target_images), epoch)
             target_images = model.deco(target_images)
-            logger.image_summary("images/target", to_grid(to_np(target_images)), epoch)
+            logger.image_summary("images/target", to_grid(target_images), epoch)
             sources = random_items(iter(dataloader_source))[0]
             model.set_deco_mode("source")
             for n, (s_img, _) in enumerate(sources):
                 source_images = s_img[:9].cuda()
-                logger.image_summary("original/source_%d" % n, to_grid(to_np(source_images)), epoch)
+                logger.image_summary("original/source_%d" % n, to_grid(source_images), epoch)
                 source_images = model.deco(source_images)
-                logger.image_summary("images/source_%d" % n, to_grid(to_np(source_images)), epoch)
+                logger.image_summary("images/source_%d" % n, to_grid(source_images), epoch)
             for name, deco in model.get_decos():
                 logger.scalar_summary("aux/%s/deco_to_image_ratio" % name, deco.ratio.item(), epoch)
                 logger.scalar_summary("aux/%s/deco_weight" % name, deco.deco_weight.item(), epoch)

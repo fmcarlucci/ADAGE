@@ -35,6 +35,6 @@ if __name__ == "__main__":
     output_folder = args.output_path
     model_path = args.model_path
     model = torch.load(model_path)
-    input_loader = get_images_for_conversion(input_folder, image_size=256)
+    input_loader = get_images_for_conversion(input_folder, image_size=28)
     with torch.no_grad():
         convert_dataset(model, input_loader, output_folder, l)
