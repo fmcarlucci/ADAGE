@@ -191,7 +191,7 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
     len_dataloader = min(len(dataloader_source), len(dataloader_target))
     data_sources_iter = iter(dataloader_source)
     data_target_iter = iter(dataloader_target)
-
+    # import ipdb; ipdb.set_trace()
     batch_idx = 0
     domain_error = 0
     # TODO count epochs on source
@@ -224,16 +224,18 @@ def train_epoch(epoch, dataloader_source, dataloader_target, optimizer, model, l
             class_loss, domain_loss, observation_loss, target_similarity = compute_batch_loss(cuda, lambda_val, model,
                                                                                               s_img, s_label, v, num_source_domains)
             if weight_sources and past_source_target_similarity is not None:
-                class_loss = class_loss * (torch.tensor(len(data_sources_batch)) * past_source_target_similarity[v]).float().cuda()
+                class_loss = class_loss * (torch.tensor(len(data_sources_batch)).float() * torch.tensor(past_source_target_similarity[v])).cuda()
+
             loss = class_loss + dann_weight * domain_loss + observation_loss
             loss.backward()
             # used for logging only
-            err_s_label += class_loss.data.cpu().numpy()
+            err_s_label += class_loss.item()
             source_domain_losses.append(domain_loss.data.cpu().numpy())
             observed_domain_losses.append(observation_loss.data.cpu().numpy())
             source_target_similarity.append(target_similarity)
             err_s_domain += domain_loss.data.cpu().numpy()
         past_source_target_similarity = softmax_list(source_target_similarity)
+
         err_s_label = err_s_label / num_source_domains
         err_s_domain = err_s_domain / num_source_domains
 
