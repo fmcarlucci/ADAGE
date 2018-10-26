@@ -388,6 +388,7 @@ class BasicDANN(nn.Module):
 
     def forward(self, input_data, lambda_val, domain=None):
         feature = self.features(input_data)
+        # print(feature.shape)
         feature = feature.view(input_data.shape[0], -1)
         reverse_feature = ReverseLayerF.apply(feature, lambda_val)
         class_output = self.class_classifier(feature)
@@ -404,7 +405,7 @@ class BasicDANN(nn.Module):
 
 
 class MnistModel(BasicDANN):
-    def __init__(self, domain_classes, n_classes):
+    def __init__(self, domain_classes, n_classes, generalization=True):
         super(MnistModel, self).__init__()
         print("Using LeNet")
         self.features = nn.Sequential(
@@ -430,7 +431,7 @@ class MnistModel(BasicDANN):
 
 
 class SVHNModel(BasicDANN):
-    def __init__(self, domain_classes, n_classes):
+    def __init__(self, domain_classes, n_classes, gen):
         super(SVHNModel, self).__init__()
         print("Using SVHN")
         self.features = nn.Sequential(
