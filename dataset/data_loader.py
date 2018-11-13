@@ -178,7 +178,7 @@ def get_transform(image_size, mode, name):
         img_transform = transforms.Compose([
             transforms.Resize(image_size),
             transforms.ToTensor(),
-            transforms.Normalize(mean=dataset_mean[name], std=dataset_std[name])
+            transforms.Normalize(mean=mean, std=std)
         ])
     elif mode == "test-tuned":
         img_transform = transforms.Compose([
